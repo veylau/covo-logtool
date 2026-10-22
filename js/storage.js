@@ -74,6 +74,20 @@ const Opslag = (() => {
     return taak;
   }
 
+  /* Vóór een migratie: log.json byte voor byte kopiëren naar log.pre-migratie-<datum>.json,
+     terug inlezen en vergelijken. Gooit een fout als de kopie niet identiek is. */
+  async function backupVoorMigratie(map) {
+    let naam = `log.pre-migratie-${vandaag()}.json`, i = 2;
+    while (await bestaat(map, naam)) naam = `log.pre-migratie-${vandaag()}_${i++}.json`;
+    const bytes = new Uint8Array(await (await (await map.getFileHandle('log.json')).getFile()).arrayBuffer());
+    await schrijf(map, naam, bytes);
+    const terug = new Uint8Array(await (await (await map.getFileHandle(naam)).getFile()).arrayBuffer());
+    if (terug.length !== bytes.length || terug.some((b, j) => b !== bytes[j])) {
+      throw new Error(`De back-up ${naam} is niet identiek aan log.json.`);
+    }
+    return naam;
+  }
+
   /* ---------- screenshots ---------- */
   const shotsMap = map => map.getDirectoryHandle('screenshots', { create: true });
   async function uniekeNaam(dir, basis) {
@@ -118,5 +132,5 @@ const Opslag = (() => {
     return naam;
   }
 
-  return { haalBewaardeMap, onthoudMap, kiesMap, toestemming, leesTekst, schrijfLog, bewaarScreenshot, screenshotUrl, hernoemScreenshot };
+  return { haalBewaardeMap, onthoudMap, kiesMap, toestemming, leesTekst, schrijfLog, backupVoorMigratie, bewaarScreenshot, screenshotUrl, hernoemScreenshot };
 })();
