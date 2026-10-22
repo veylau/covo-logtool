@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COVO-logtool</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="balk">
+    <h1>COVO-logtool</h1>
+    <nav id="nav">
+      <button type="button" data-scherm="invoer" id="nav-invoer">+ Nieuw record</button>
+      <button type="button" data-scherm="tijdlijn">Tijdlijn</button>
+      <button type="button" data-scherm="overzicht">Overzicht</button>
+      <button type="button" data-scherm="instellingen">Instellingen</button>
+      <span class="scheiding"></span>
+      <button type="button" id="btn-csv">Export CSV</button>
+      <button type="button" id="btn-json">Export JSON</button>
+    </nav>
+    <div class="status"><span id="mapnaam"></span><span id="opslagstatus"></span></div>
+  </header>
+  <div id="melding" hidden></div>
+  <main id="main"></main>
+
+  <dialog id="dlg">
+    <div id="dlg-inhoud"></div>
+    <div class="knoppen">
+      <button type="button" id="dlg-nee">Annuleren</button>
+      <button type="button" id="dlg-ja" class="primair">Bevestigen</button>
+    </div>
+  </dialog>
+
+  <div id="lb" hidden>
+    <div class="lb-kop">
+      <span class="lb-run" id="lb-run"></span>
+      <span class="lb-moment" id="lb-moment"></span>
+      <span class="lb-naam" id="lb-naam"></span>
+      <span class="flex"></span>
+      <span class="lb-teller" id="lb-teller"></span>
+      <button type="button" id="lb-sluit" title="Sluiten (Esc)">✕</button>
+    </div>
+    <div class="lb-beeld">
+      <button type="button" class="lb-pijl" id="lb-vorige" title="Vorige (←)">‹</button>
+      <img id="lb-img" alt="">
+      <button type="button" class="lb-pijl" id="lb-volgende" title="Volgende (→)">›</button>
+    </div>
+    <div class="lb-voet">← → bladeren · Home / End eerste / laatste · Esc sluiten</div>
+  </div>
+
+  <script src="js/parser.js"></script>
+  <script src="js/analyse.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+/*
+ * COVO – kleurgecodeerde modulariteit
+ * Kent een kleur toe aan de geselecteerde elementen.
+ *
+ * Gebruik:
+ *  - Selecteer één of meer elementen in een view (diagram)
+ *    OF in de modelboom (dan krijgt elk voorkomen in alle views de kleur).
+ *  - Voer het script uit, kies een kleur.
+ *  - Optioneel: ook alles wat in de geselecteerde elementen genest staat.
+ *  - Ongedaan maken kan met Ctrl+Z.
+ */
+
+console.clear();
+
+var kleuren = [
+    ["Teal", "#55cbcd"],
+    ["Groen", "#97c1a9"],
+    ["Blauw", "#abdee6"],
+    ["Paars", "#cbaacb"],
+    ["Roze", "#f3b0c3"],
+    ["Zalm", "#ff968a"],
+    ["Oranje", "#ffc8a2"],
+    ["Zachtgeel (reserve)", "#f6eac2"],
+    ["Neutraal (L0)", "#f2f2f2"],
+    ["Standaard Archi-kleur", null]
+];
+
+var sel = $(selection);
+if (sel.size() === 0) {
+    window.alert("Selecteer eerst één of meer elementen (in een view of in de modelboom).");
+    exit();
+}
+
+var labels = kleuren.map(function (k) {
+    return k[0] + (k[1] ? "  " + k[1] : "");
+});
+
+var keuze = null;
+if (typeof window.promptSelection === "function") {
+    keuze = window.promptSelection("Kies een kleur", labels);
+} else {
+    var lijst = labels.map(function (l, i) { return (i + 1) + ". " + l; }).join("\n");
+    var nr = window.prompt("Kies een kleur (nummer):\n" + lijst, "1");
+    if (nr && labels[parseInt(nr, 10) - 1]) keuze = labels[parseInt(nr, 10) - 1];
+}
+if (!keuze) exit();
+
+// promptSelection kan een Java-string of een index teruggeven: robuust vergelijken
+var index = -1;
+if (typeof keuze === "number") {
+    index = keuze;
+} else {
+    var k = String(keuze).trim();
+    for (var i = 0; i < labels.length; i++) {
+        if (labels[i].trim() === k || labels[i].indexOf(k) === 0 || k.indexOf(kleuren[i][0]) === 0) {
+            index = i;
+            break;
+        }
+    }
+}
+if (index < 0 || index >= kleuren.length) {
+    window.alert("Kleurkeuze niet herkend: " + keuze);
+    exit();
+}
+var kleur = kleuren[index][1];
+keuze = kleuren[index][0];
+var genest = window.confirm("Ook alles wat in de geselecteerde elementen genest staat inkleuren?");
+
+var teller = 0;
+
+function kleurDiagramObject(d) {
+    // alleen objecten met een vlak (geen relaties/verbindingen)
+    if (d.bounds === undefined) return;
+    try {
+        d.fillColor = kleur;
+        teller++;
+    } catch (e) {
+        console.log("Overgeslagen: " + d.name + " (" + e + ")");
+    }
+    if (genest) {
+        $(d).find().each(function (c) {
+            if (c.bounds === undefined) return;
+            try {
+                c.fillColor = kleur;
+                teller++;
+            } catch (e) {
+                console.log("Overgeslagen: " + c.name + " (" + e + ")");
+            }
+        });
+    }
+}
+
+sel.each(function (o) {
+    if (o.concept !== undefined && o.bounds !== undefined) {
+        // geselecteerd in een view
+        kleurDiagramObject(o);
+    } else if (o.type && o.type.indexOf("relationship") === -1) {
+        // geselecteerd in de modelboom: alle voorkomens in alle views
+        $(o).objectRefs().each(function (d) {
+            kleurDiagramObject(d);
+        });
+    }
+});
+
+console.log(teller + " object(en) ingekleurd met " + keuze + ".");
