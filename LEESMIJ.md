@@ -89,3 +89,9 @@ Na het afronden ligt het oordeel van *het moment zelf* vast. Bij *Bewerken* kun 
 - "Records met nieuwe meldingen" in het overzicht = een constraint die nieuw verscheen óf waarvan het aantal steeg.
 - Een kapotte `log.json` wordt nooit overschreven: de tool meldt het probleem. Hernoem dan een `log.backup-…json` naar `log.json`.
 - Werk met de log in één browservenster tegelijk.
+
+## AI-ondersteuning
+
+De code en de documentatie van deze tool (README, LEESMIJ) werden geschreven met AI-ondersteuning (Claude Code, Anthropic), op basis van de specificatie en iteratieve feedback van de auteur. Het jArchi-script `scripts/kleur_toekennen.ajs` werd geschreven met AI-ondersteuning in een Claude-chatgesprek (Claude, Anthropic).
+
+Het onderzoeksopzet, de requirements, de keuzes in de tool en het testen en gebruik in de onderzoekscontext zijn van de auteur.

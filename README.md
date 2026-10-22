@@ -89,8 +89,13 @@ to use it. Its prompts are in Dutch.
 
 ## AI assistance
 
-This tool was built with AI assistance (Claude Code, Anthropic). The design,
-requirements and testing in the research context are the author's.
+The code and documentation of this tool (README, LEESMIJ) were written with
+AI assistance (Claude Code, Anthropic), based on the author's specification and
+iterative feedback. The jArchi script `scripts/kleur_toekennen.ajs` was written
+with AI assistance in a Claude chat conversation (Claude, Anthropic).
+
+The research design, the requirements, the choices in the tool, and the testing
+and use in the research context are the author's.
 
 ## License
 
