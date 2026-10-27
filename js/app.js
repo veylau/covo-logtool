@@ -44,7 +44,10 @@ function standaardInstellingen() {
   };
 }
 function nieuweData() {
-  return { schemaVersion: SCHEMA_VERSIE, settings: standaardInstellingen(), actiefOnderdeel: 'covo', migraties: [], records: [], werkversie: null };
+  const settings = standaardInstellingen();
+  // Nieuw log: elk onderdeel een eigen (lege) viewlijst. Omgezette logs houden de gemeenschappelijke lijst tot je ze verdeelt.
+  settings.onderdelen.forEach(o => { o.views = []; });
+  return { schemaVersion: SCHEMA_VERSIE, settings, actiefOnderdeel: 'covo', migraties: [], records: [], werkversie: null };
 }
 function nieuwRecord(onderdeel = 'covo') {
   return {
@@ -108,6 +111,8 @@ const onderdelen = () => S.data.settings.onderdelen;
 const onderdeelVan = id => onderdelen().find(o => o.id === id) || null;
 const actief = () => onderdeelVan(S.data.actiefOnderdeel) || onderdelen()[0];
 const typeVan = r => (onderdeelVan(r.onderdeel) || { type: 'covo' }).type;
+/* Views van een onderdeel. Onderdelen zonder eigen lijst (logs van vóór v2.1) gebruiken de gemeenschappelijke lijst. */
+const viewsVan = o => (o && Array.isArray(o.views) ? o.views : S.data.settings.views);
 const recsVan = id => S.data.records.filter(r => r.onderdeel === id);
 const recsActief = () => recsVan(actief().id);
 const zoek = id => S.data.records.find(r => r.id === id);
@@ -327,7 +332,7 @@ function filterBalk(alleRecs, type) {
   const groepen = [...new Set(alleRecs.map(r => groepVan(r.run)).filter(g => g !== null))].sort((a, b) => a - b);
   const cons = [...new Set(alleRecs.flatMap(r => r.constraints))].sort();
   const treqs = [...new Set([...S.data.settings.tobeRequirements, ...alleRecs.flatMap(r => r.tobeRequirements)])];
-  const views = [...new Set([...S.data.settings.views, ...alleRecs.flatMap(r => r.views)])];
+  const views = [...new Set([...viewsVan(actief()), ...alleRecs.flatMap(r => r.views)])];
   const delen = [];
   if (type === 'covo') delen.push(sel('groep', 'Groep', groepen.map(g => [g, 'Groep ' + g])));
   if (type === 'tobe-met') delen.push(sel('recordtype', 'Type', Object.entries(LABELS.recordtype)));

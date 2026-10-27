@@ -67,7 +67,8 @@ const shotBlok = (side, label) =>
 function renderEditor(m) {
   const e = S.ed, r = e.rec, inst = S.data.settings, o = edOnderdeel(), type = o.type;
   const metValidator = type !== 'tobe-zonder';
-  const views = [...inst.views, ...r.views.filter(v => !inst.views.includes(v))];
+  const eigenViews = viewsVan(o);
+  const views = [...eigenViews, ...r.views.filter(v => !eigenViews.includes(v))];
   const stappen = type === 'tobe-zonder'
     ? ['1 · Start', '2 · Wijziging', '3 · Einde']
     : ['1 · Opstart <small>run vóór</small>', '2 · Wijziging', '3 · Afsluiting <small>run na</small>'];
@@ -111,7 +112,7 @@ function renderEditor(m) {
       <div class="veld"><span class="label">View(s) <small class="hint">meerdere mogelijk</small></span>
         ${views.length
           ? `<div class="viewlijst">${views.map(v => `<label class="item"><input type="checkbox" data-view="${esc(v)}" ${r.views.includes(v) ? 'checked' : ''}> <span>${esc(v)}</span></label>`).join('')}</div>`
-          : '<p class="leeg">Nog geen views. Voeg de views van je model toe via Instellingen.</p>'}</div>
+          : `<p class="leeg">Nog geen views voor “${esc(o.naam)}”. Voeg ze toe via Instellingen.</p>`}</div>
       <div class="veld"><span class="label">Uitgevoerde actie${type === 'covo' ? ' <small class="hint">aantal optioneel</small>' : ' — aantallen'}</span><div id="ed-acties"></div></div>
       <label class="veld"><span class="label" id="lbl-beschr">Beschrijving actie</span><textarea data-bind="beschrijving" rows="3">${esc(r.beschrijving)}</textarea></label>
       ${type !== 'tobe-zonder' ? `<div class="veld"><span class="label">Behulpzaam${type === 'tobe-met' ? ' <small class="hint">hielp de validator bij deze wijziging? Nvt als hij niets te melden had</small>' : ''}</span><div id="ed-behulpzaam"></div></div>` : ''}
@@ -214,7 +215,7 @@ function onEdInput(ev) {
   } else if (d.view !== undefined) {
     r.views = r.views.filter(v => v !== d.view);
     if (t.checked) r.views.push(d.view);
-    const volgorde = S.data.settings.views;
+    const volgorde = viewsVan(edOnderdeel());
     r.views.sort((a, b) => (volgorde.indexOf(a) + 1 || 1e9) - (volgorde.indexOf(b) + 1 || 1e9));
   } else if (d.req !== undefined) {
     r.requirements.ids = r.requirements.ids.filter(x => x !== d.req);

@@ -45,6 +45,8 @@ overview and CSV export you get. By default there are three parts:
 | TO-BE – model without COVO (`tobe-zonder`) | `T1.<nr>` | TO-BE requirement(s), views, action counts, description, screenshots; validator output only for information |
 | TO-BE – model with COVO (`tobe-met`) | `T2.<nr>` | as without COVO, plus validator runs before/after with the effect and the **new messages**; a record is either a *TO-BE change* or a *COVO correction* (fixing messages caused by a change, attributed to a TO-BE requirement) |
 
+Each part has its own list of views (since v2.1), so the entry form and
+filters only show the views of the model you are working on.
 Actions are counted per element/relation × add/remove/move/rename/type changed.
 The duration of a record is calculated from the times before and after.
 The **TO-BE comparison** shows, per TO-BE requirement, the model without COVO
@@ -76,8 +78,8 @@ No installation, build step, server or external libraries are needed.
 3. Click **Gegevensmap kiezen** (choose data folder) and select an empty
    folder. The tool remembers this folder and asks for permission again when
    needed.
-4. Under **Instellingen** (settings), enter the views of your model, one per
-   line. The research parts, the constraint list (C01–C13, M01, V01, V02),
+4. Under **Instellingen** (settings), enter the views of the model for each
+   research part, one per line. The research parts, the constraint list (C01–C13, M01, V01, V02),
    the requirements (R1–R8) and the TO-BE requirements can be adjusted there
    as well.
 5. Click **+ Nieuw record** (new record) to start logging.

@@ -419,7 +419,13 @@ function renderInstellingen(m) {
       <small class="hint">Het type bepaalt het invoerformulier. Runnummers: COVO-type = prefix + groep (R1.01), TO-BE-types = vaste prefix (T1.01).</small>
     </div>
 
-    ${lijst('in-views', 'Views (keuzelijst bij veld View)', inst.views, 'Eén view per regel. Records met een verwijderde view behouden hun waarde.')}
+    <div class="veld"><span class="label">Views per onderdeel <small class="hint">keuzelijst bij veld View(s)</small></span>
+      <div class="views-per-onderdeel">${inst.onderdelen.map(o => { const v = viewsVan(o); return `
+        <label class="veld"><span class="label"><span class="badge onderdeel o-${esc(o.type)}">${esc(o.naam)}</span>${Array.isArray(o.views) ? '' : ' <small class="hint">nog de gemeenschappelijke lijst: schrap wat niet bij dit onderdeel hoort</small>'}</span>
+          <textarea data-o-views="${esc(o.id)}" rows="${Math.min(14, v.length + 2)}">${esc(v.join('\n'))}</textarea></label>`; }).join('')}
+      </div>
+      <small class="hint">Eén view per regel. In de invoer, de filters en de tabel zie je alleen de views van het actieve onderdeel. Records met een verwijderde view behouden hun waarde.</small>
+    </div>
     ${lijst('in-cons', 'Vaste lijst constraints', inst.constraints, 'Eén code per regel.')}
     ${lijst('in-req', 'Requirements (COVO-iteratie: geraakt / verfijnd)', inst.requirements, 'Eén requirement per regel.')}
     ${lijst('in-treq', 'TO-BE-requirements', inst.tobeRequirements, 'Eén requirement per regel.')}
@@ -433,13 +439,13 @@ function renderInstellingen(m) {
     const nieuw = inst.onderdelen.map(o => ({
       ...o,
       naam: $(`[data-o-naam="${o.id}"]`).value.trim() || o.naam,
-      runPrefix: $(`[data-o-prefix="${o.id}"]`).value.trim().toUpperCase()
+      runPrefix: $(`[data-o-prefix="${o.id}"]`).value.trim().toUpperCase(),
+      views: [...new Set($(`[data-o-views="${o.id}"]`).value.split('\n').map(x => x.trim()).filter(Boolean))]
     }));
     for (const o of nieuw) if (!prefixGeldig(o.runPrefix, o.type)) fouten.push(`Ongeldige run-prefix “${o.runPrefix}” voor ${o.naam}.`);
     if (new Set(nieuw.map(o => o.runPrefix)).size !== nieuw.length) fouten.push('Elke run-prefix moet uniek zijn.');
     if (fouten.length) { bevestig(`<h3>Niet bewaard</h3><ul>${fouten.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`, 'OK'); return; }
     inst.onderdelen = nieuw;
-    inst.views = regels('in-views');
     inst.constraints = regels('in-cons').map(x => x.toUpperCase());
     inst.requirements = regels('in-req');
     inst.tobeRequirements = regels('in-treq');
@@ -454,7 +460,7 @@ function renderInstellingen(m) {
       return;
     }
     const id = naam.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) + '-' + uid().slice(0, 4);
-    inst.onderdelen.push({ id, naam, type, runPrefix: prefix });
+    inst.onderdelen.push({ id, naam, type, runPrefix: prefix, views: [] });
     bewaarLog(true);
     render();
   });

@@ -260,8 +260,13 @@ table.vergelijking th.m, table.vergelijking td.m { background: color-mix(in srgb
 table.vergelijking th { text-align: center; }
 
 /* ---------- instellingen ---------- */
-.instellingen { max-width: 900px; }
+.instellingen { max-width: 1200px; }
 table.onderdelen input[type=text] { min-width: 120px; }
+.views-per-onderdeel { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 14px; }
+.views-per-onderdeel textarea { font-size: 12px; }
+.badge.onderdeel.o-covo { background: var(--kl-covo); border-color: var(--kl-covo); }
+.badge.onderdeel.o-tobe-zonder { background: var(--kl-tobe-zonder); border-color: var(--kl-tobe-zonder); }
+.badge.onderdeel.o-tobe-met { background: var(--kl-tobe-met); border-color: var(--kl-tobe-met); }
 
 /* ---------- lightbox ---------- */
 #lb { position: fixed; inset: 0; z-index: 30; background: #0d0f12; color: #fff; display: flex; flex-direction: column; }

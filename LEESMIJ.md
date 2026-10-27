@@ -9,7 +9,7 @@ Lokale webtool om validatorruns en modelwijzigingen te loggen. Geen installatie,
 1. Open `index.html` in **Google Chrome** of **Microsoft Edge** (dubbelklik, of sleep het bestand in de browser).
 2. De eerste keer: klik **Gegevensmap kiezen** en kies een (lege) map, bv. in OneDrive.
 3. Volgende keren onthoudt de tool de map. Vraagt de browser opnieuw toestemming, klik dan **Toegang geven**.
-4. Vul bij **Instellingen** de views van je model in (één per regel). Daar beheer je ook de onderdelen, de constraints (C01–C13, M01, V01, V02), de requirements (R1–R8) en de TO-BE-requirements.
+4. Vul bij **Instellingen** per onderdeel de views van het model in (één per regel). Daar beheer je ook de onderdelen, de constraints (C01–C13, M01, V01, V02), de requirements (R1–R8) en de TO-BE-requirements.
 
 ## Mappen
 
@@ -54,6 +54,8 @@ Standaard zijn er drie onderdelen. Ze zijn hernoembaar en je kunt er bijmaken in
 | TO-BE – model met COVO (`tobe-met`) | `T2.<nr>` | TO-BE-requirements toepassen op het model met COVO |
 
 Het runnummer wordt automatisch opgehoogd binnen het onderdeel en blijft aanpasbaar.
+
+**Views per onderdeel.** Elk onderdeel heeft een eigen viewlijst (Instellingen → *Views per onderdeel*). In de invoer, de filters en de tabel zie je alleen de views van het actieve onderdeel. Een log dat met v2.0 omgezet werd, start met de gemeenschappelijke lijst bij elk onderdeel; schrap per onderdeel wat er niet bij hoort en bewaar. Records met een view die niet (meer) in de lijst staat, behouden die waarde.
 
 **Vorig record.** Bij *Nieuw record* neemt de tool de output, de build en de screenshots over van het vorige record **binnen hetzelfde onderdeel**. Het **eerste** record van *TO-BE met COVO* neemt de eindtoestand van de COVO-iteratie over (de laatste output en screenshots). Het eerste record van *TO-BE zonder COVO* neemt niets over: dat is een ander model.
 
