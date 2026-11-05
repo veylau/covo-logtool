@@ -209,6 +209,7 @@ async function laadShots(root) {
 async function onTijdlijnClick(ev) {
   const b = ev.target.closest('button[data-action]');
   if (b) {
+    if (window.COVO_VIEWER) return; // viewer: alleen-lezen
     const id = b.dataset.id;
     if (b.dataset.action === 'bewerk') startBewerken(id);
     else if (b.dataset.action === 'verwijder') verwijder(id);

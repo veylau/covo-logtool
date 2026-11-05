@@ -268,6 +268,11 @@ table.onderdelen input[type=text] { min-width: 120px; }
 .badge.onderdeel.o-tobe-zonder { background: var(--kl-tobe-zonder); border-color: var(--kl-tobe-zonder); }
 .badge.onderdeel.o-tobe-met { background: var(--kl-tobe-met); border-color: var(--kl-tobe-met); }
 
+/* ---------- viewer (alleen-lezen) ---------- */
+body.viewer [data-scherm="invoer"], body.viewer [data-scherm="instellingen"],
+body.viewer .detail-knoppen { display: none !important; }
+body.viewer #mapnaam { font-weight: 600; color: var(--onderdeel); }
+
 /* ---------- lightbox ---------- */
 #lb { position: fixed; inset: 0; z-index: 30; background: #0d0f12; color: #fff; display: flex; flex-direction: column; }
 .lb-kop { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: rgba(0,0,0,.4); }

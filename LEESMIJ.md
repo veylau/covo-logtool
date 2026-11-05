@@ -24,6 +24,8 @@ tool/                        ← deze map (de code)
 ├─ js/app.js                 kern: gegevens, migratie, navigatie, filters, lightbox
 ├─ js/invoer.js              invoerformulier (per onderdeel)
 ├─ js/weergaven.js           tabel, tijdlijn, overzichten, vergelijking, instellingen
+├─ viewer/covo-viewer.html   alleen-lezen-viewer (één bestand) voor een webserver
+├─ viewer/maak-viewer.ps1    maakt de viewer opnieuw uit de code van de tool
 └─ scripts/kleur_toekennen.ajs  jArchi-script: kleur toekennen aan elementen in Archi
 
 gegevensmap/                 ← de map die je kiest (de data)
@@ -132,6 +134,24 @@ Na het afronden ligt het oordeel van *het moment zelf* vast. Bij *Bewerken* kun 
 - **Export JSON:** volledige back-up van alles.
 
 De bestanden komen in de downloadmap.
+
+## Viewer voor een webserver (alleen-lezen)
+
+`viewer/covo-viewer.html` is één HTML-bestand waarmee iemand anders je log in de browser kan bekijken, zonder de tool te installeren en in elke browser (ook Firefox of Safari). De viewer toont de tabel met details en vorige/volgende, de tijdlijn, de overzichten, de vergelijking TO-BE en de lightbox, en kan CSV en JSON exporteren. Hij kan niets invoeren, bewerken of verwijderen en schrijft nooit iets weg.
+
+Zet op je webserver, in één map:
+
+```
+covo-viewer/
+├─ covo-viewer.html   ← uit de map viewer/ van deze repo
+├─ log.json           ← kopie uit je gegevensmap
+└─ screenshots/       ← kopie uit je gegevensmap
+```
+
+- Bijwerken = `log.json` en `screenshots/` opnieuw uploaden. Back-ups hoeven niet mee.
+- De viewer werkt alleen via een webserver (`https://…`), niet door het bestand lokaal te openen.
+- **Beveiliging:** de viewer zelf heeft geen wachtwoord. Zet hem in een map die beveiligd is (bv. met het wachtwoord van je site, via HTTPS).
+- Na een wijziging aan de tool maak je de viewer opnieuw met `.\viewer\maak-viewer.ps1` (PowerShell, vanuit de map `covo-logtool`). Het script bakt de CSS en de JavaScript van de tool in het HTML-bestand.
 
 ## Nieuwe versie van de tool en migratie
 

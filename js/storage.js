@@ -112,6 +112,7 @@ const Opslag = (() => {
   }
   const urlCache = new Map();
   async function screenshotUrl(map, naam) {
+    if (window.COVO_VIEWER) return `screenshots/${encodeURIComponent(naam)}`; // viewer: map naast de pagina
     if (urlCache.has(naam)) return urlCache.get(naam);
     try {
       const dir = await shotsMap(map);

@@ -53,6 +53,17 @@ The **TO-BE comparison** shows, per TO-BE requirement, the model without COVO
 next to the model with COVO (records, actions, duration, increase in messages,
 corrections) and can be exported as CSV.
 
+### Read-only viewer for a web server
+
+`viewer/covo-viewer.html` is a single HTML file (the tool's CSS and JavaScript
+baked in) that shows a log read-only in any browser: table with details and
+previous/next, timeline, overviews, TO-BE comparison and lightbox. Put it on a
+web server in one folder together with a copy of `log.json` and the
+`screenshots/` folder; it loads them itself and never writes anything. The
+viewer has no password of its own, so place it in a protected folder (e.g.
+HTTP authentication over HTTPS). After changing the tool, rebuild the viewer
+with `.\viewer\maak-viewer.ps1` (PowerShell).
+
 ### Migration of existing logs
 
 When a newer version of the tool opens an older `log.json`, it first writes a
@@ -99,6 +110,8 @@ covo-logtool/                 this repository (code only)
 ├─ js/app.js                  core: data, migration, navigation, filters, lightbox
 ├─ js/invoer.js               entry form (per research part)
 ├─ js/weergaven.js            table, timeline, overviews, comparison, settings
+├─ viewer/covo-viewer.html    read-only viewer (single file) for a web server
+├─ viewer/maak-viewer.ps1     rebuilds the viewer from the tool's code
 ├─ scripts/kleur_toekennen.ajs  jArchi script to colour selected elements in Archi
 ├─ LEESMIJ.md                 Dutch manual
 └─ README.md

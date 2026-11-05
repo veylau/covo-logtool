@@ -1,0 +1,2666 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COVO-log (alleen-lezen)</title>
+  <style>
+:root {
+  --bg: #f4f5f7;
+  --kaart: #ffffff;
+  --tekst: #1f2328;
+  --zacht: #656d76;
+  --lijn: #d8dde3;
+  --lijn-zacht: #eceff2;
+  --accent: #2f5d8a;
+  --accent-zacht: #e6eef6;
+  --ok: #1a7f37;
+  --nok: #b42318;
+  --waarsch-bg: #fff8e1;
+  --waarsch-lijn: #e7c66b;
+  --concept: #8a5a00;
+  --radius: 6px;
+  /* kleur per onderdeeltype */
+  --kl-covo: #2f5d8a;
+  --kl-tobe-zonder: #7a4a94;
+  --kl-tobe-met: #17766a;
+  --onderdeel: var(--kl-covo);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16191d; --kaart: #1f2328; --tekst: #e6e8eb; --zacht: #9aa4ae;
+    --lijn: #3a4047; --lijn-zacht: #2b3036; --accent: #7fb0e0; --accent-zacht: #23303d;
+    --ok: #56c271; --nok: #f07167; --waarsch-bg: #3a3220; --waarsch-lijn: #7d6a2f; --concept: #e0b45c;
+    --kl-covo: #7fb0e0; --kl-tobe-zonder: #c39be0; --kl-tobe-met: #5cc7b5;
+  }
+}
+body[data-type="tobe-zonder"] { --onderdeel: var(--kl-tobe-zonder); }
+body[data-type="tobe-met"] { --onderdeel: var(--kl-tobe-met); }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--tekst);
+  font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+}
+h1, h2, h3, h4 { margin: 0 0 .5em; line-height: 1.25; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
+h4 { font-size: .9rem; margin-top: .8em; color: var(--zacht); text-transform: uppercase; letter-spacing: .03em; }
+code, kbd, pre, textarea { font-family: Consolas, "Cascadia Mono", monospace; }
+kbd { border: 1px solid var(--lijn); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; font-size: .85em; }
+small { font-weight: normal; }
+.hint { color: var(--zacht); font-size: .85em; }
+.leeg { color: var(--zacht); font-style: italic; }
+.ok { color: var(--ok); }
+.nok { color: var(--nok); }
+.flex { flex: 1; }
+.pre-wrap { white-space: pre-wrap; }
+[hidden] { display: none !important; }
+
+/* ---------- balk ---------- */
+.balk {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 8px 16px; background: var(--kaart); border-bottom: 1px solid var(--lijn);
+  border-top: 5px solid var(--onderdeel);
+}
+.onderdeel-keuze { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--onderdeel); }
+.onderdeel-keuze select { width: auto; font-weight: 600; color: var(--onderdeel); border: 2px solid var(--onderdeel); }
+.onderdeel-keuze select:disabled { opacity: .7; cursor: not-allowed; }
+body:not(.geladen) .onderdeel-keuze { visibility: hidden; }
+.badge.onderdeel { background: var(--onderdeel); border-color: var(--onderdeel); color: var(--kaart); font-weight: 600; font-size: .85em; }
+.badge.rt-wijziging { border-color: var(--kl-tobe-met); color: var(--kl-tobe-met); }
+.badge.rt-correctie { border-color: var(--nok); color: var(--nok); }
+.balk h1 { font-size: 1.05rem; margin: 0; }
+.balk nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+body:not(.geladen) .balk nav { visibility: hidden; }
+.balk .scheiding { width: 1px; height: 22px; background: var(--lijn); margin: 0 6px; }
+.balk .status { margin-left: auto; display: flex; gap: 12px; color: var(--zacht); font-size: .85em; }
+#opslagstatus.fout { color: var(--nok); font-weight: 600; }
+nav button.actief { background: var(--accent-zacht); border-color: var(--accent); color: var(--accent); }
+
+#melding {
+  position: fixed; right: 16px; bottom: 16px; z-index: 20; max-width: 460px;
+  padding: 10px 14px; border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  background: var(--kaart); border-left: 4px solid var(--accent);
+}
+#melding.fout { border-left-color: var(--nok); cursor: pointer; }
+#melding.waarsch { border-left-color: var(--waarsch-lijn); }
+
+main { max-width: 1440px; margin: 0 auto; padding: 16px; }
+.kaart { background: var(--kaart); border: 1px solid var(--lijn); border-radius: var(--radius); padding: 16px 20px; }
+.start { max-width: 640px; margin: 48px auto; }
+.kop-rij { display: flex; align-items: baseline; gap: 12px; }
+
+/* ---------- formulieren ---------- */
+button {
+  font: inherit; padding: 5px 12px; border-radius: var(--radius); cursor: pointer;
+  border: 1px solid var(--lijn); background: var(--kaart); color: var(--tekst);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primair { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (prefers-color-scheme: dark) { button.primair { color: #10161c; } }
+button.volgende { background: var(--accent-zacht); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+button.volgende:hover:not(:disabled) { background: var(--accent); color: var(--kaart); }
+button.gevaar { color: var(--nok); }
+button.primair.gevaar { background: var(--nok); border-color: var(--nok); color: #fff; }
+button.klein { padding: 1px 8px; font-size: .85em; }
+input[type=text], input[type=date], input[type=time], select, textarea {
+  font: inherit; color: inherit; background: var(--kaart);
+  border: 1px solid var(--lijn); border-radius: var(--radius); padding: 5px 8px; width: 100%;
+}
+textarea { font-size: 12.5px; resize: vertical; }
+input:focus, select:focus, textarea:focus, .plakvak:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input.kort { max-width: 140px; }
+.veld { display: block; margin: 0 0 14px; }
+.veld > .label { display: block; font-weight: 600; margin-bottom: 4px; }
+.rij { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.rij > .veld { flex: 0 0 auto; }
+.rij > .veld.breed { flex: 1 1 220px; }
+.inline { display: flex; gap: 6px; margin-top: 6px; }
+.keuzes { display: flex; gap: 4px 14px; flex-wrap: wrap; align-items: center; }
+.keuze { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.verplicht { color: var(--nok); font-size: .8em; font-weight: 600; }
+
+/* ---------- invoer ---------- */
+.ed-kop { display: flex; align-items: center; gap: 12px; }
+.ed-kop h2 { margin: 0; }
+.info { color: var(--zacht); margin: 4px 0 10px; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--lijn); margin: 8px 0 16px; }
+.tabs button {
+  border: 1px solid transparent; border-bottom: none; border-radius: var(--radius) var(--radius) 0 0;
+  margin-bottom: -1px; padding: 8px 16px; background: transparent;
+}
+.tabs button small { color: var(--zacht); }
+.tabs button.actief { background: var(--kaart); border-color: var(--lijn); border-bottom: 1px solid var(--kaart); font-weight: 600; }
+.ed-voet {
+  position: sticky; bottom: 0; display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 12px 0 4px; margin-top: 12px; background: var(--kaart); border-top: 1px solid var(--lijn);
+}
+
+details.output { border: 1px solid var(--lijn); border-radius: var(--radius); margin: 0 0 14px; }
+details.output > summary { padding: 8px 12px; cursor: pointer; }
+details.output .samenv { color: var(--zacht); font-weight: normal; }
+.output-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: 12px; padding: 0 12px 12px; }
+.parsed { font-size: .9em; background: var(--bg); border-radius: var(--radius); padding: 8px 12px; overflow: auto; max-height: 460px; }
+.parsed-kop { margin-bottom: 6px; }
+ul.secties { padding-left: 18px; margin: 0; }
+
+.plakvak {
+  border: 2px dashed var(--lijn); border-radius: var(--radius); padding: 10px; min-height: 80px; cursor: copy;
+}
+.plakvak.sleep { border-color: var(--accent); background: var(--accent-zacht); }
+.plakvak img { display: block; max-width: 100%; max-height: 420px; margin: 6px 0; border: 1px solid var(--lijn-zacht); }
+.plakvak .hint { margin: 4px 0 0; }
+.shot-kop { display: flex; gap: 8px; align-items: center; }
+.shots-lijst { display: flex; flex-direction: column; gap: 8px; }
+.plakvak.gevuld { border-style: solid; cursor: default; }
+.plakvak.nieuw { min-height: 0; color: var(--zacht); }
+.nr { display: inline-block; min-width: 22px; text-align: center; border-radius: 999px; background: var(--accent-zacht); color: var(--accent); font-weight: 600; font-size: .85em; }
+.leeg-shot { color: var(--zacht); font-style: italic; }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0; }
+.chips-label { color: var(--zacht); font-size: .85em; min-width: 110px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px;
+  border: 1px solid var(--lijn); border-radius: 999px; cursor: pointer; font-size: .9em;
+}
+.chip.in-output { border-color: var(--accent); }
+.chip:has(input:checked) { background: var(--accent-zacht); border-color: var(--accent); font-weight: 600; }
+.tel { background: var(--lijn-zacht); border-radius: 999px; padding: 0 6px; font-size: .85em; font-weight: 600; }
+
+.melding-blok { border: 1px solid var(--lijn); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 8px; }
+.melding-kop { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.items { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
+.item { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; font-size: .92em; }
+.item input { margin-top: 3px; }
+.melding-blok textarea { margin-top: 4px; }
+.viewlijst { columns: 380px 2; column-gap: 16px; border: 1px solid var(--lijn); border-radius: var(--radius); padding: 8px 12px; }
+.viewlijst .item { break-inside: avoid; padding: 1px 0; }
+.item:has(input:checked) { font-weight: 600; }
+
+table.acties { border-collapse: collapse; margin-bottom: 6px; }
+table.acties th, table.acties td { padding: 4px 12px; border-bottom: 1px solid var(--lijn-zacht); text-align: center; }
+table.acties th:first-child { text-align: left; }
+table.acties td { white-space: nowrap; }
+input.aantal { width: 58px; padding: 2px 4px; text-align: right; }
+table.acties input[type=checkbox] + input.aantal { width: 48px; margin-left: 4px; }
+.duur { padding: 5px 0; }
+.nieuwe-meldingen { margin-top: 6px; border-left: 3px solid var(--nok); padding: 2px 10px; }
+.nieuwe-meldingen ul { margin: 2px 0 0; padding-left: 18px; }
+.herz-nieuw { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.herz-nieuw input[type=text] { width: 260px; }
+
+.waarsch { background: var(--waarsch-bg); border: 1px solid var(--waarsch-lijn); border-radius: var(--radius); padding: 8px 12px; margin: 8px 0; }
+.waarsch ul { margin: 4px 0 0; padding-left: 20px; }
+.waarsch.klein { font-size: .9em; padding: 4px 8px; }
+
+.badge { display: inline-block; font-size: .78em; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--lijn); white-space: nowrap; }
+.badge.concept { color: var(--concept); border-color: var(--concept); }
+.badge.afgerond { color: var(--ok); border-color: var(--ok); }
+.badge.waarsch { background: var(--waarsch-bg); border-color: var(--waarsch-lijn); padding: 1px 6px; margin: 0; }
+.badge.vast { color: var(--ok); border-color: var(--ok); }
+.badge.live { color: var(--concept); border-color: var(--concept); }
+.status.ok { color: var(--ok); font-weight: 600; }
+.status.nok { color: var(--nok); font-weight: 600; }
+
+table.mini { border-collapse: collapse; font-size: .92em; }
+table.mini th, table.mini td { padding: 2px 8px; border-bottom: 1px solid var(--lijn-zacht); text-align: left; vertical-align: top; }
+table.mini td.getal, table.mini th.getal { text-align: right; font-variant-numeric: tabular-nums; }
+table.mini tr.totaal th, table.mini tr.totaal td { border-top: 1px solid var(--lijn); font-weight: 600; }
+table.mini tr.nok td, table.mini tr.nok th { color: var(--nok); }
+table.mini tr.ok td, table.mini tr.ok th { color: var(--ok); }
+.gevolg-tekst { font-weight: 600; margin: 0 0 4px; }
+
+/* ---------- filters ---------- */
+.filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 8px 0 14px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius); }
+.filters select { width: auto; max-width: 340px; }
+
+/* ---------- tijdlijn ---------- */
+table.tijdlijn { width: 100%; border-collapse: collapse; }
+table.tijdlijn th { text-align: left; font-size: .85em; color: var(--zacht); border-bottom: 1px solid var(--lijn); padding: 6px 8px; }
+table.tijdlijn td { padding: 6px 8px; border-bottom: 1px solid var(--lijn-zacht); vertical-align: top; }
+tr.rec { cursor: pointer; }
+tr.rec:hover td { background: var(--accent-zacht); }
+tr.rec.open td { background: var(--accent-zacht); border-bottom-color: transparent; }
+td.view-kol { max-width: 260px; }
+table.tijdlijn td.getal { text-align: right; white-space: nowrap; }
+table.tabel td { padding: 4px 8px; font-size: .93em; }
+table.tabel th.sorteerbaar { cursor: pointer; user-select: none; white-space: nowrap; }
+table.tabel th.sorteerbaar:hover { color: var(--tekst); }
+table.tabel th.op::after { content: ' ▲'; }
+table.tabel th.af::after { content: ' ▼'; }
+.detail-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.detail-nav .positie { min-width: 140px; text-align: center; }
+.kop-rij .badge.onderdeel { align-self: center; }
+td.badges { white-space: nowrap; text-align: right; }
+tr.detail > td { background: var(--accent-zacht); padding: 0 8px 12px; }
+.detail-inhoud { background: var(--kaart); border: 1px solid var(--lijn); border-radius: var(--radius); padding: 12px 16px; }
+.detail-knoppen { display: flex; gap: 8px; justify-content: flex-end; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; margin: 8px 0; }
+.detail-grid dl { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+.detail-grid dt { color: var(--zacht); font-size: .9em; }
+.detail-grid dd { margin: 0; }
+ul.meld { margin: 0; padding-left: 18px; }
+ul.meld ul { padding-left: 16px; font-size: .92em; }
+.shots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.shots figure { margin: 0; }
+.shots figcaption { font-size: .85em; color: var(--zacht); margin-bottom: 4px; }
+.shots img { width: 100%; border: 1px solid var(--lijn); cursor: zoom-in; }
+pre.ruw { max-height: 420px; overflow: auto; background: var(--bg); padding: 8px 12px; border-radius: var(--radius); font-size: 12px; white-space: pre; }
+.detail-inhoud details { margin-top: 6px; }
+.detail-inhoud summary { cursor: pointer; color: var(--accent); }
+
+/* ---------- overzicht ---------- */
+.groep { border-top: 1px solid var(--lijn); padding-top: 12px; margin-top: 12px; }
+.groep h3 small { color: var(--zacht); }
+.groep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px 28px; }
+.groep-grid h4 { margin-top: .4em; }
+ul.lijst { margin: 0; padding-left: 18px; }
+
+table.mini.breed { margin-bottom: 4px; }
+table.mini tfoot th, table.mini tfoot td { border-top: 2px solid var(--lijn); font-weight: 600; }
+table.acties-soort th { text-align: center; }
+table.vergelijking th.z, table.vergelijking td.z { background: color-mix(in srgb, var(--kl-tobe-zonder) 10%, transparent); }
+table.vergelijking th.m, table.vergelijking td.m { background: color-mix(in srgb, var(--kl-tobe-met) 10%, transparent); }
+table.vergelijking th { text-align: center; }
+
+/* ---------- instellingen ---------- */
+.instellingen { max-width: 1200px; }
+table.onderdelen input[type=text] { min-width: 120px; }
+.views-per-onderdeel { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 14px; }
+.views-per-onderdeel textarea { font-size: 12px; }
+.badge.onderdeel.o-covo { background: var(--kl-covo); border-color: var(--kl-covo); }
+.badge.onderdeel.o-tobe-zonder { background: var(--kl-tobe-zonder); border-color: var(--kl-tobe-zonder); }
+.badge.onderdeel.o-tobe-met { background: var(--kl-tobe-met); border-color: var(--kl-tobe-met); }
+
+/* ---------- viewer (alleen-lezen) ---------- */
+body.viewer [data-scherm="invoer"], body.viewer [data-scherm="instellingen"],
+body.viewer .detail-knoppen { display: none !important; }
+body.viewer #mapnaam { font-weight: 600; color: var(--onderdeel); }
+
+/* ---------- lightbox ---------- */
+#lb { position: fixed; inset: 0; z-index: 30; background: #0d0f12; color: #fff; display: flex; flex-direction: column; }
+.lb-kop { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: rgba(0,0,0,.4); }
+.lb-run { font-size: 1.4rem; font-weight: 700; }
+.lb-run, .lb-moment, .lb-teller { white-space: nowrap; }
+.lb-naam { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-moment { font-size: 1.1rem; font-weight: 700; padding: 2px 12px; border-radius: 999px; letter-spacing: .05em; }
+.lb-moment.pre { background: #c26a00; }
+.lb-moment.aft { background: #1a7f37; }
+.lb-naam { font-family: Consolas, monospace; opacity: .8; }
+.lb-teller { opacity: .8; font-variant-numeric: tabular-nums; }
+#lb button { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.3); }
+#lb button:hover:not(:disabled) { background: rgba(255,255,255,.15); }
+.lb-beeld { flex: 1; min-height: 0; display: flex; align-items: center; gap: 12px; padding: 12px; }
+.lb-beeld img { flex: 1; min-width: 0; max-height: 100%; object-fit: contain; }
+#lb .lb-pijl { font-size: 2.4rem; line-height: 1; padding: 8px 14px; border: none; }
+.lb-voet { text-align: center; font-size: .8rem; opacity: .6; padding: 6px; }
+.plakvak img, .shots img { cursor: zoom-in; }
+
+dialog { border: 1px solid var(--lijn); border-radius: var(--radius); background: var(--kaart); color: var(--tekst); max-width: 640px; width: 90vw; padding: 16px 20px; }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+dialog .knoppen { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+@media (max-width: 900px) {
+  .output-grid, .detail-grid { grid-template-columns: 1fr; }
+  .detail-grid dl { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+  <header class="balk">
+    <h1>COVO-logtool</h1>
+    <label class="onderdeel-keuze">Onderdeel <select id="onderdeel"></select></label>
+    <nav id="nav">
+      <button type="button" data-scherm="invoer" id="nav-invoer">+ Nieuw record</button>
+      <button type="button" data-scherm="tabel">Tabel</button>
+      <button type="button" data-scherm="tijdlijn">Tijdlijn</button>
+      <button type="button" data-scherm="overzicht">Overzicht</button>
+      <button type="button" data-scherm="vergelijking" id="nav-vergelijking">Vergelijking TO-BE</button>
+      <button type="button" data-scherm="instellingen">Instellingen</button>
+      <span class="scheiding"></span>
+      <button type="button" id="btn-csv">Export CSV</button>
+      <button type="button" id="btn-json">Export JSON</button>
+    </nav>
+    <div class="status"><span id="mapnaam"></span><span id="opslagstatus"></span></div>
+  </header>
+  <div id="melding" hidden></div>
+  <main id="main"></main>
+
+  <dialog id="dlg">
+    <div id="dlg-inhoud"></div>
+    <div class="knoppen">
+      <button type="button" id="dlg-nee">Annuleren</button>
+      <button type="button" id="dlg-ja" class="primair">Bevestigen</button>
+    </div>
+  </dialog>
+
+  <div id="lb" hidden>
+    <div class="lb-kop">
+      <span class="lb-run" id="lb-run"></span>
+      <span class="lb-moment" id="lb-moment"></span>
+      <span class="lb-naam" id="lb-naam"></span>
+      <span class="flex"></span>
+      <span class="lb-teller" id="lb-teller"></span>
+      <button type="button" id="lb-sluit" title="Sluiten (Esc)">✕</button>
+    </div>
+    <div class="lb-beeld">
+      <button type="button" class="lb-pijl" id="lb-vorige" title="Vorige (←)">‹</button>
+      <img id="lb-img" alt="">
+      <button type="button" class="lb-pijl" id="lb-volgende" title="Volgende (→)">›</button>
+    </div>
+    <div class="lb-voet">← → bladeren · Home / End eerste / laatste · Esc sluiten</div>
+  </div>
+
+  <script>window.COVO_VIEWER = true;</script>
+  <script>/* js/parser.js */
+'use strict';
+/*
+ * Leest de tekstoutput van de COVO-Validator.
+ * Robuust geschreven: ontbrekende of afwijkende regels worden overgeslagen
+ * en leveren een waarschuwing op in plaats van een fout.
+ * Verhoog PARSER_VERSIE bij elke inhoudelijke wijziging aan de parser.
+ */
+const PARSER_VERSIE = 1;
+
+function parseValidatorOutput(tekst) {
+  const res = {
+    parserVersie: PARSER_VERSIE,
+    herkend: false,
+    aantalRapporten: 0,
+    status: null,
+    modus: null,
+    selectie: { views: null, elements: null, horizontal: null, vertical: null },
+    samenvatting: {},
+    samenvattingAfgeleid: false,
+    secties: [],
+    duurMs: null,
+    waarschuwingen: []
+  };
+  if (!tekst || !tekst.trim()) return res;
+
+  const regels = tekst.replace(/\r\n?/g, '\n').split('\n');
+  res.aantalRapporten = (tekst.match(/COVO VALIDATION REPORT/gi) || []).length;
+
+  let fase = null;      // 'selectie' | 'samenvatting' | null
+  let sectie = null;    // huidige sectie (globaal / view)
+  let blok = null;      // huidig [!!]-blok
+  let inKop = false;    // tussen twee ====-lijnen
+  let rapporten = 0;
+  const nieuweSectie = () => {
+    sectie = { soort: 'overig', titel: '', view: null, aantal: null, type: null, pad: null, blokken: [] };
+    res.secties.push(sectie);
+  };
+
+  for (const ruw of regels) {
+    const r = ruw.trim();
+    let m;
+
+    if (/COVO VALIDATION REPORT/i.test(r)) {
+      if (++rapporten > 1) break; // alleen het eerste rapport lezen
+      continue;
+    }
+    if (/^#{5,}$/.test(r)) continue;
+
+    if (/^={5,}$/.test(r)) {
+      if (inKop) inKop = false;
+      else { inKop = true; fase = null; blok = null; nieuweSectie(); }
+      continue;
+    }
+
+    if ((m = r.match(/^\[!!\]\s*([A-Za-z]+\d+)\s*[-–:]\s*(.*?)\s*:?\s*$/))) {
+      inKop = false; fase = null;
+      if (!sectie) nieuweSectie();
+      blok = { code: m[1].toUpperCase(), titel: m[2], items: [], meer: 0 };
+      sectie.blokken.push(blok);
+      continue;
+    }
+
+    if (inKop) {
+      if (!r) continue;
+      if ((m = r.match(/^VIEW:\s*(.*?)\s*\((\d+)\s+violations?\)\s*$/i))) {
+        sectie.soort = 'view'; sectie.view = m[1]; sectie.aantal = +m[2]; sectie.titel = r;
+      } else if ((m = r.match(/^VIEW:\s*(.*)$/i))) {
+        sectie.soort = 'view'; sectie.view = m[1]; sectie.titel = r;
+      } else if ((m = r.match(/^Type:\s*(.*)$/i))) {
+        sectie.type = m[1];
+      } else if ((m = r.match(/^Path:\s*(.*)$/i))) {
+        sectie.pad = m[1];
+      } else {
+        if (/GLOBAL/i.test(r)) sectie.soort = 'globaal';
+        if (!sectie.titel) sectie.titel = r;
+      }
+      continue;
+    }
+
+    if ((m = r.match(/^OVERALL STATUS:\s*([A-Za-z]+)/i))) { res.status = m[1].toUpperCase(); fase = null; continue; }
+    if (/^SELECTION:?$/i.test(r)) { fase = 'selectie'; blok = null; continue; }
+    if (/^VIOLATION SUMMARY:?$/i.test(r)) { fase = 'samenvatting'; blok = null; continue; }
+    if ((m = r.match(/Validation completed in\s+(\d+)\s*ms/i))) { res.duurMs = +m[1]; fase = null; blok = null; continue; }
+    if (!r) { blok = null; continue; }
+
+    if (fase === 'selectie') {
+      if ((m = r.match(/^-\s*(CONSTRUCTION|AUDIT)\s+mode/i))) res.modus = m[1].toLowerCase();
+      else if ((m = r.match(/^-\s*(\d+)\s+views?\b/i))) res.selectie.views = +m[1];
+      else if ((m = r.match(/^-\s*(\d+)\s+elements?\b/i))) res.selectie.elements = +m[1];
+      else if ((m = r.match(/^-\s*(\d+)\s+horizontal\s+relationships?\b/i))) res.selectie.horizontal = +m[1];
+      else if ((m = r.match(/^-\s*(\d+)\s+vertical\s+relationships?\b/i))) res.selectie.vertical = +m[1];
+      continue;
+    }
+    if (fase === 'samenvatting') {
+      if ((m = r.match(/^-\s*([A-Za-z]+\d+)\s*:\s*(\d+)\s+violations?/i))) res.samenvatting[m[1].toUpperCase()] = +m[2];
+      continue;
+    }
+    if (blok) {
+      if ((m = r.match(/^-\s*\.\.\.\s*and\s+(\d+)\s+more/i))) blok.meer = +m[1];
+      else if ((m = r.match(/^-\s*(.+)$/))) blok.items.push(m[1]);
+    }
+  }
+
+  res.herkend = rapporten > 0 || res.status !== null;
+  if (!res.modus) {
+    const m = tekst.match(/\b(CONSTRUCTION|AUDIT)\s+mode\b/i);
+    if (m) res.modus = m[1].toLowerCase();
+  }
+
+  // Controle: aantallen uit de samenvatting tegenover wat de blokken tonen.
+  const uitBlokken = {};
+  for (const s of res.secties) for (const b of s.blokken) {
+    uitBlokken[b.code] = (uitBlokken[b.code] || 0) + b.items.length + b.meer;
+  }
+  const w = res.waarschuwingen;
+  if (!res.herkend) w.push('Geen COVO-rapport herkend in de tekst.');
+  if (res.aantalRapporten > 1) w.push(`De tekst bevat ${res.aantalRapporten} rapporten; alleen het eerste is gelezen.`);
+  if (res.herkend && !res.status) w.push('OVERALL STATUS niet gevonden.');
+  if (res.herkend && !res.modus) w.push('Modus (CONSTRUCTION/AUDIT) niet gevonden.');
+  if (!Object.keys(res.samenvatting).length && Object.keys(uitBlokken).length) {
+    res.samenvatting = { ...uitBlokken };
+    res.samenvattingAfgeleid = true;
+    w.push('Geen VIOLATION SUMMARY gevonden; aantallen afgeleid uit de meldingsblokken.');
+  } else {
+    for (const code of Object.keys(res.samenvatting)) {
+      if (!(code in uitBlokken)) w.push(`${code} staat in de samenvatting, maar er is geen meldingsblok gevonden.`);
+      else if (uitBlokken[code] !== res.samenvatting[code]) w.push(`${code}: samenvatting telt ${res.samenvatting[code]}, de blokken samen ${uitBlokken[code]}.`);
+    }
+    for (const code of Object.keys(uitBlokken)) {
+      if (!(code in res.samenvatting)) w.push(`${code} heeft een meldingsblok, maar staat niet in de samenvatting.`);
+    }
+  }
+  const totaal = Object.values(res.samenvatting).reduce((a, b) => a + b, 0);
+  if (res.status === 'FAILED' && totaal === 0) w.push('Status FAILED, maar geen meldingen gevonden.');
+  if (res.status === 'PASSED' && totaal > 0) w.push('Status PASSED, maar er zijn meldingen gevonden.');
+  return res;
+}
+
+/* Alle (unieke) meldingen van één constraint, over alle secties heen. */
+function meldingenVoor(p, code) {
+  const items = [], gezien = new Set();
+  let titel = null;
+  for (const s of (p && p.secties) || []) for (const b of s.blokken) {
+    if (b.code !== code) continue;
+    if (titel === null) titel = b.titel;
+    for (const it of b.items) if (!gezien.has(it)) { gezien.add(it); items.push(it); }
+  }
+  return { titel, items, totaal: p && p.samenvatting[code] != null ? p.samenvatting[code] : null };
+}
+
+if (typeof module !== 'undefined') module.exports = { parseValidatorOutput, meldingenVoor, PARSER_VERSIE };
+
+</script>
+  <script>/* js/analyse.js */
+'use strict';
+/* Afgeleide gegevens: runnummers, chronologie, gevolg, waarschuwingen, overzichten. */
+
+const LABELS = {
+  object: { relatie: 'Relatie', element: 'Element', niet_opgelost: 'Bewust niet opgelost' },
+  soort: { toevoegen: 'Toevoegen', verwijderen: 'Verwijderen', verplaatsen: 'Verplaatsen', hernoemen: 'Hernoemen', type_gewijzigd: 'Type gewijzigd' },
+  behulpzaam: { ja: 'Ja', nee: 'Nee', twijfel: 'Twijfel', nvt: 'Nvt' },
+  req: { nee: 'Nee', geraakt: 'Geraakt', verfijnd: 'Verfijnd' },
+  modus: { construction: 'Construction', audit: 'Audit' },
+  status: { concept: 'concept', afgerond: 'afgerond' },
+  recordtype: { wijziging: 'TO-BE-wijziging', correctie: 'COVO-correctie' },
+  type: { covo: 'COVO-iteratie', 'tobe-zonder': 'TO-BE zonder COVO', 'tobe-met': 'TO-BE met COVO' }
+};
+const SOORTEN = Object.keys(LABELS.soort);
+const OBJECTEN = ['relatie', 'element'];
+/* R1.01 (COVO: prefix + groep), T1.01 / T2.01 (TO-BE: vaste prefix) */
+const RUN_RE = /^([A-Z]+)(\d+)\.(\d+)$/;
+
+/* ---------- datum & tijd ---------- */
+const p2 = n => String(n).padStart(2, '0');
+function vandaag() { const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; }
+function nuTijd() { const d = new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
+function isoNu() { return `${vandaag()}T${nuTijd()}`; }
+function toonDatum(iso) { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return `${d}/${m}/${y}`; }
+/* Duur in minuten tussen tijdstip vóór en na; null als iets ontbreekt. */
+function duurMinuten(r) {
+  if (!r.pre.datum || !r.pre.tijd || !r.aft.datum || !r.aft.tijd) return null;
+  const ms = new Date(`${r.aft.datum}T${r.aft.tijd}`) - new Date(`${r.pre.datum}T${r.pre.tijd}`);
+  return Number.isFinite(ms) && ms >= 0 ? Math.round(ms / 60000) : null;
+}
+
+/* ---------- runs ---------- */
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function groepVan(run) { const m = RUN_RE.exec((run || '').trim()); return m ? +m[2] : null; }
+function volgendeRun(run) {
+  const m = RUN_RE.exec((run || '').trim());
+  if (!m) return '';
+  return `${m[1]}${m[2]}.${String(+m[3] + 1).padStart(Math.max(2, m[3].length), '0')}`;
+}
+function runPatroon(o) {
+  return o.type === 'covo' ? new RegExp(`^${escRe(o.runPrefix)}\\d+\\.\\d+$`) : new RegExp(`^${escRe(o.runPrefix)}\\.\\d+$`);
+}
+const eersteRun = o => (o.type === 'covo' ? `${o.runPrefix}1.01` : `${o.runPrefix}.01`);
+function runSorteersleutel(run) {
+  const m = RUN_RE.exec((run || '').trim());
+  return m ? `${m[1]}${m[2].padStart(5, '0')}.${m[3].padStart(5, '0')}` : `~${run || ''}`;
+}
+function sleutel(r) { return `${r.pre.datum || ''}T${r.pre.tijd || ''}|${r.aangemaakt || ''}`; }
+function chrono(recs) { return [...recs].sort((a, b) => (sleutel(a) < sleutel(b) ? -1 : sleutel(a) > sleutel(b) ? 1 : 0)); }
+
+function actieTekst(a) {
+  if (a.object === 'niet_opgelost') return 'bewust niet opgelost';
+  const t = `${LABELS.object[a.object].toLowerCase()} ${(LABELS.soort[a.soort] || a.soort).toLowerCase()}`;
+  return a.aantal != null ? `${a.aantal}× ${t}` : t;
+}
+const actiesTotaal = r => r.acties.reduce((s, a) => s + (a.object !== 'niet_opgelost' && a.aantal ? a.aantal : 0), 0);
+function behulpzaamHerzien(r) {
+  const h = r.behulpzaam.herzieningen;
+  return h.length ? h[h.length - 1] : null;
+}
+
+/* ---------- gevolg ---------- */
+const afgekapt = (p, code) => p.secties.some(s => s.blokken.some(b => b.code === code && b.meer > 0));
+/* Nieuwe individuele meldingen: tekst komt na voor en vóór niet.
+   "zeker" als de lijst vóór volledig is, anders "mogelijk" (afgekapt met "… and N more"). */
+function nieuweMeldingen(pre, aft) {
+  const uit = [];
+  for (const code of Object.keys(aft.samenvatting)) {
+    const voor = new Set(meldingenVoor(pre, code).items);
+    const items = meldingenVoor(aft, code).items.filter(x => !voor.has(x));
+    const voorAfgekapt = afgekapt(pre, code), naAfgekapt = afgekapt(aft, code);
+    const stijging = (aft.samenvatting[code] || 0) > (pre.samenvatting[code] || 0);
+    if (items.length || (naAfgekapt && stijging)) {
+      uit.push({ code, zeker: voorAfgekapt ? [] : items, mogelijk: voorAfgekapt ? items : [], naAfgekapt });
+    }
+  }
+  return uit;
+}
+function berekenGevolg(pre, aft) {
+  const codes = [...new Set([...Object.keys(pre.samenvatting), ...Object.keys(aft.samenvatting)])].sort();
+  const per = codes.map(c => ({ code: c, voor: pre.samenvatting[c] || 0, na: aft.samenvatting[c] || 0 }));
+  return {
+    perConstraint: per,
+    nieuw: per.filter(x => x.voor === 0 && x.na > 0).map(x => x.code),
+    verdwenen: per.filter(x => x.voor > 0 && x.na === 0).map(x => x.code),
+    toegenomen: per.filter(x => x.voor > 0 && x.na > x.voor).map(x => x.code),
+    toename: per.reduce((s, x) => s + Math.max(0, x.na - x.voor), 0),
+    meldingenNieuw: nieuweMeldingen(pre, aft),
+    statusVoor: pre.status,
+    statusNa: aft.status,
+    totaalVoor: per.reduce((a, x) => a + x.voor, 0),
+    totaalNa: per.reduce((a, x) => a + x.na, 0),
+    tekst: per.length ? per.map(x => `${x.code}: ${x.voor} → ${x.na}`).join(' · ') : 'geen meldingen vóór en na'
+  };
+}
+/* Toename ook voor oude gevolgen zonder veld "toename". */
+const toenameVan = g => (g ? (g.toename != null ? g.toename : g.perConstraint.reduce((s, x) => s + Math.max(0, x.na - x.voor), 0)) : 0);
+
+/* ---------- waarschuwingen (niet blokkerend) ---------- */
+function normTekst(t) {
+  return (t || '').replace(/\r\n?/g, '\n').split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !/Validation completed in/i.test(l))
+    .join('\n');
+}
+function berekenWaarschuwingen(r, vorig, pre, aft) {
+  const w = [];
+  if (vorig && vorig.aft.output && r.pre.output && normTekst(vorig.aft.output) !== normTekst(r.pre.output)) {
+    w.push(`Pre_Validatoroutput verschilt van de Aft_Validatoroutput van het vorige record (${vorig.run}): toestand veranderd buiten de log?`);
+  }
+  if (pre && pre.herkend && aft && aft.herkend) {
+    const namen = { views: 'views', elements: 'elements', horizontal: 'horizontal relationships', vertical: 'vertical relationships' };
+    const versch = Object.keys(namen).filter(k => pre.selectie[k] !== aft.selectie[k])
+      .map(k => `${namen[k]} ${pre.selectie[k] ?? '?'} → ${aft.selectie[k] ?? '?'}`);
+    if (versch.length) w.push(`Selectie verschilt tussen vóór en na: ${versch.join(', ')}.`);
+  }
+  if (pre && pre.modus && r.modus && pre.modus !== r.modus) w.push(`Modus in de output vóór (${LABELS.modus[pre.modus]}) verschilt van het veld Modus (${LABELS.modus[r.modus]}).`);
+  if (aft && aft.modus && r.modus && aft.modus !== r.modus) w.push(`Modus in de output na (${LABELS.modus[aft.modus]}) verschilt van het veld Modus (${LABELS.modus[r.modus]}).`);
+  for (const [naam, p] of [['vóór', pre], ['na', aft]]) {
+    if (p) for (const x of p.waarschuwingen) w.push(`Output ${naam}: ${x}`);
+  }
+  return w;
+}
+
+/* ---------- vergelijking bij opnieuw parsen ---------- */
+function vergelijkParsed(a, b) {
+  if (!a) return ['Er was nog geen vastgelegde parsing.'];
+  const v = [];
+  const f = x => (x === null || x === undefined ? '–' : x);
+  const z = (label, x, y) => { if (JSON.stringify(x) !== JSON.stringify(y)) v.push(`${label}: ${f(x)} → ${f(y)}`); };
+  z('Status', a.status, b.status);
+  z('Modus', a.modus, b.modus);
+  for (const k of Object.keys(b.selectie)) z(`Selectie ${k}`, a.selectie[k], b.selectie[k]);
+  const codes = [...new Set([...Object.keys(a.samenvatting), ...Object.keys(b.samenvatting)])].sort();
+  for (const c of codes) z(`Aantal ${c}`, a.samenvatting[c], b.samenvatting[c]);
+  z('Aantal secties', a.secties.length, b.secties.length);
+  const strip = p => { const { parserVersie, ...rest } = p; return rest; };
+  if (!v.length && JSON.stringify(strip(a)) !== JSON.stringify(strip(b))) v.push('Details van de meldingen of waarschuwingen verschillen.');
+  return v;
+}
+
+/* ---------- overzicht COVO-iteratie (per groep) ---------- */
+function leegActies() {
+  const a = {};
+  for (const o of OBJECTEN) { a[o] = {}; for (const s of SOORTEN) a[o][s] = 0; }
+  return a;
+}
+function overzichtGroep(recs) {
+  const leeg = () => ({ ja: 0, nee: 0, twijfel: 0, nvt: 0, leeg: 0 });
+  const o = {
+    aantal: recs.length,
+    afgerond: recs.filter(r => r.status === 'afgerond').length,
+    eerste: null, laatste: null,
+    acties: leegActies(), nietOpgelost: 0,
+    intuitief: {},
+    behulpzaam: { moment: leeg(), herzien: leeg(), aantalHerzien: 0 },
+    req: { geraakt: 0, verfijnd: 0, lijst: [] },
+    nieuweMeldingen: []
+  };
+  const metPre = recs.find(r => r.pre.parsed);
+  if (metPre) o.eerste = { run: metPre.run, samenvatting: metPre.pre.parsed.samenvatting };
+  for (let i = recs.length - 1; i >= 0; i--) {
+    const r = recs[i];
+    if (r.aft.parsed) { o.laatste = { run: r.run, moment: 'na', samenvatting: r.aft.parsed.samenvatting }; break; }
+    if (r.pre.parsed) { o.laatste = { run: r.run, moment: 'vóór', samenvatting: r.pre.parsed.samenvatting }; break; }
+  }
+  for (const r of recs) {
+    for (const a of r.acties) {
+      if (a.object === 'niet_opgelost') o.nietOpgelost++;
+      else if (o.acties[a.object] && a.soort in o.acties[a.object]) o.acties[a.object][a.soort]++;
+    }
+    for (const c of r.constraints) {
+      const v = r.intuitief.perConstraint[c];
+      o.intuitief[c] = o.intuitief[c] || { ja: 0, nee: 0, leeg: 0 };
+      o.intuitief[c][v === 'ja' || v === 'nee' ? v : 'leeg']++;
+    }
+    const m = r.behulpzaam.moment;
+    o.behulpzaam.moment[m || 'leeg']++;
+    const h = behulpzaamHerzien(r);
+    o.behulpzaam.herzien[(h ? h.waarde : m) || 'leeg']++;
+    if (h) o.behulpzaam.aantalHerzien++;
+    const rq = r.requirements;
+    if (rq.status === 'geraakt' || rq.status === 'verfijnd') {
+      o.req[rq.status]++;
+      o.req.lijst.push({ run: r.run, id: r.id, status: rq.status, ids: rq.ids, verfijning: rq.verfijning });
+    }
+    if (r.gevolg && (r.gevolg.nieuw.length || r.gevolg.toegenomen.length)) {
+      o.nieuweMeldingen.push({ run: r.run, id: r.id, nieuw: r.gevolg.nieuw, toegenomen: r.gevolg.toegenomen, tekst: r.gevolg.tekst });
+    }
+  }
+  return o;
+}
+
+/* ---------- overzicht TO-BE (per requirement) ---------- */
+function tobeRij() {
+  return { records: 0, wijzigingen: 0, correcties: 0, acties: leegActies(), actiesTotaal: 0, duur: 0, duurOnbekend: 0, toename: 0, nieuweConstraints: 0, runs: [] };
+}
+function voegTobeToe(x, r) {
+  x.records++;
+  if (r.recordtype === 'wijziging') x.wijzigingen++;
+  if (r.recordtype === 'correctie') x.correcties++;
+  for (const a of r.acties) {
+    if (a.object === 'niet_opgelost' || !x.acties[a.object] || !(a.soort in x.acties[a.object])) continue;
+    x.acties[a.object][a.soort] += a.aantal || 0;
+    x.actiesTotaal += a.aantal || 0;
+  }
+  const d = duurMinuten(r);
+  if (d === null) x.duurOnbekend++; else x.duur += d;
+  if (r.gevolg) { x.toename += toenameVan(r.gevolg); x.nieuweConstraints += r.gevolg.nieuw.length; }
+  x.runs.push(r.run);
+}
+/* Records met meerdere requirements tellen bij elk requirement mee; "totaal" telt elk record één keer. */
+function overzichtTobe(recs, reqLijst) {
+  const per = new Map(reqLijst.map(q => [q, tobeRij()]));
+  const zonder = tobeRij(), totaal = tobeRij();
+  for (const r of recs) {
+    if (r.tobeRequirements.length) {
+      for (const q of r.tobeRequirements) {
+        if (!per.has(q)) per.set(q, tobeRij());
+        voegTobeToe(per.get(q), r);
+      }
+    } else voegTobeToe(zonder, r);
+    voegTobeToe(totaal, r);
+  }
+  return { per, zonder, totaal };
+}
+
+</script>
+  <script>/* js/storage.js */
+'use strict';
+/*
+ * Opslag via de File System Access API.
+ * - De gekozen map wordt als handle in IndexedDB onthouden (niet de gegevens zelf).
+ * - log.json bevat alles; per dag één log.backup-<datum>.json met de toestand
+ *   van vóór de eerste wijziging van die dag.
+ * - Screenshots in de submap screenshots/.
+ */
+const Opslag = (() => {
+  const DB = 'covo-logtool', ST = 'kv';
+
+  function db() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(ST);
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idb(modus, fn) {
+    const d = await db();
+    return new Promise((res, rej) => {
+      const tx = d.transaction(ST, modus);
+      const req = fn(tx.objectStore(ST));
+      tx.oncomplete = () => res(req.result);
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+
+  const haalBewaardeMap = () => idb('readonly', s => s.get('map'));
+  const onthoudMap = h => idb('readwrite', s => s.put(h, 'map'));
+  const kiesMap = () => window.showDirectoryPicker({ id: 'covo-logtool', mode: 'readwrite' });
+
+  async function toestemming(h, vraag) {
+    if (typeof h.queryPermission !== 'function') return true;
+    const o = { mode: 'readwrite' };
+    if ((await h.queryPermission(o)) === 'granted') return true;
+    if (vraag) return (await h.requestPermission(o)) === 'granted';
+    return false;
+  }
+
+  async function bestaat(dir, naam) {
+    try { await dir.getFileHandle(naam); return true; }
+    catch (e) {
+      if (e.name === 'NotFoundError') return false;
+      if (e.name === 'TypeMismatchError') return true; // map met die naam
+      throw e;
+    }
+  }
+  async function leesTekst(dir, naam) {
+    try { return await (await (await dir.getFileHandle(naam)).getFile()).text(); }
+    catch (e) { if (e.name === 'NotFoundError') return null; throw e; }
+  }
+  async function schrijf(dir, naam, inhoud) {
+    const fh = await dir.getFileHandle(naam, { create: true });
+    const w = await fh.createWritable();
+    await w.write(inhoud);
+    await w.close();
+  }
+
+  /* Schrijfopdrachten na elkaar uitvoeren, nooit tegelijk. */
+  let rij = Promise.resolve();
+  function schrijfLog(map, data) {
+    const json = JSON.stringify(data, null, 2);
+    const taak = rij.catch(() => {}).then(async () => {
+      const backup = `log.backup-${vandaag()}.json`;
+      if (!(await bestaat(map, backup))) {
+        const oud = await leesTekst(map, 'log.json');
+        if (oud !== null) await schrijf(map, backup, oud);
+      }
+      await schrijf(map, 'log.json', json);
+    });
+    rij = taak;
+    return taak;
+  }
+
+  /* Vóór een migratie: log.json byte voor byte kopiëren naar log.pre-migratie-<datum>.json,
+     terug inlezen en vergelijken. Gooit een fout als de kopie niet identiek is. */
+  async function backupVoorMigratie(map) {
+    let naam = `log.pre-migratie-${vandaag()}.json`, i = 2;
+    while (await bestaat(map, naam)) naam = `log.pre-migratie-${vandaag()}_${i++}.json`;
+    const bytes = new Uint8Array(await (await (await map.getFileHandle('log.json')).getFile()).arrayBuffer());
+    await schrijf(map, naam, bytes);
+    const terug = new Uint8Array(await (await (await map.getFileHandle(naam)).getFile()).arrayBuffer());
+    if (terug.length !== bytes.length || terug.some((b, j) => b !== bytes[j])) {
+      throw new Error(`De back-up ${naam} is niet identiek aan log.json.`);
+    }
+    return naam;
+  }
+
+  /* ---------- screenshots ---------- */
+  const shotsMap = map => map.getDirectoryHandle('screenshots', { create: true });
+  async function uniekeNaam(dir, basis) {
+    let naam = `${basis}.png`, i = 2;
+    while (await bestaat(dir, naam)) naam = `${basis}_${i++}.png`;
+    return naam;
+  }
+  async function naarPng(blob) {
+    if (blob.type === 'image/png') return blob;
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement('canvas');
+    c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0);
+    return new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('Omzetten naar PNG mislukt.'))), 'image/png'));
+  }
+  async function bewaarScreenshot(map, blob, basis) {
+    const dir = await shotsMap(map);
+    const png = await naarPng(blob);
+    const naam = await uniekeNaam(dir, basis);
+    await schrijf(dir, naam, png);
+    return naam;
+  }
+  const urlCache = new Map();
+  async function screenshotUrl(map, naam) {
+    if (window.COVO_VIEWER) return `screenshots/${encodeURIComponent(naam)}`; // viewer: map naast de pagina
+    if (urlCache.has(naam)) return urlCache.get(naam);
+    try {
+      const dir = await shotsMap(map);
+      const f = await (await dir.getFileHandle(naam)).getFile();
+      const u = URL.createObjectURL(f);
+      urlCache.set(naam, u);
+      return u;
+    } catch (e) { return null; }
+  }
+  /* Hernoemen = kopiëren naar een nieuwe unieke naam + oude verwijderen. */
+  async function hernoemScreenshot(map, oud, basis) {
+    const dir = await shotsMap(map);
+    const inhoud = await (await (await dir.getFileHandle(oud)).getFile()).arrayBuffer();
+    const naam = await uniekeNaam(dir, basis);
+    await schrijf(dir, naam, inhoud);
+    await dir.removeEntry(oud);
+    if (urlCache.has(oud)) { URL.revokeObjectURL(urlCache.get(oud)); urlCache.delete(oud); }
+    return naam;
+  }
+
+  return { haalBewaardeMap, onthoudMap, kiesMap, toestemming, leesTekst, schrijfLog, backupVoorMigratie, bewaarScreenshot, screenshotUrl, hernoemScreenshot };
+})();
+
+</script>
+  <script>/* js/export.js */
+'use strict';
+/* Export naar CSV (Belgische Excel: UTF-8 met BOM, scheidingsteken ;) en JSON.
+   CSV per onderdeel: de kolommen hangen af van het type van het onderdeel. */
+
+function csvWaarde(v) {
+  if (v === null || v === undefined) return '';
+  let s = String(v);
+  if (/^[=+\-@]/.test(s)) s = ' ' + s; // voorkomt dat Excel tekst als formule leest
+  return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+const aantallen = p => (p ? Object.entries(p.samenvatting).map(([c, n]) => `${c}=${n}`).join('|') : '');
+const sel = (p, k) => (p ? p.selectie[k] : '');
+const actieKolommen = () => OBJECTEN.flatMap(o => SOORTEN.map(s => `${o}_${s}`));
+/* Aantal per combinatie. COVO: leeg als niet ingevuld (vinkje zonder aantal = "x"). TO-BE: 0 als de actie ontbreekt. */
+function actieWaarde(r, sleutelKol, type) {
+  const [o, ...rest] = sleutelKol.split('_'), s = rest.join('_');
+  const a = r.acties.find(x => x.object === o && x.soort === s);
+  if (type === 'covo') return a ? (a.aantal != null ? a.aantal : 'x') : '';
+  return a && a.aantal ? a.aantal : 0;
+}
+const nieuwZeker = r => (r.gevolg && r.gevolg.meldingenNieuw ? r.gevolg.meldingenNieuw.flatMap(x => x.zeker.map(t => `${x.code}: ${t}`)).join('|') : '');
+const nieuwMogelijk = r => (r.gevolg && r.gevolg.meldingenNieuw ? r.gevolg.meldingenNieuw.flatMap(x => x.mogelijk.map(t => `${x.code}: ${t}`)).join('|') : '');
+
+const KOL = {
+  id: r => r.id,
+  status: r => r.status,
+  onderdeel: r => (onderdeelVan(r.onderdeel) || {}).naam,
+  run: r => r.run,
+  groep: r => groepVan(r.run),
+  recordtype: r => r.recordtype,
+  pre_datum: r => r.pre.datum,
+  pre_tijdstip: r => r.pre.tijd,
+  modus: r => (r.modus ? LABELS.modus[r.modus] : ''),
+  validator_build: r => r.build,
+  pre_status: r => r.pre.parsed && r.pre.parsed.status,
+  pre_modus_output: r => r.pre.parsed && r.pre.parsed.modus,
+  pre_views: r => sel(r.pre.parsed, 'views'),
+  pre_elements: r => sel(r.pre.parsed, 'elements'),
+  pre_horizontal: r => sel(r.pre.parsed, 'horizontal'),
+  pre_vertical: r => sel(r.pre.parsed, 'vertical'),
+  pre_aantallen: r => aantallen(r.pre.parsed),
+  pre_screenshots: r => r.pre.screenshots.map(s => s.naam).join('|'),
+  constraints: r => r.constraints.join('|'),
+  meldingen: r => r.meldingen.map(m => `${m.constraint}: ${m.tekst}${m.bron === 'vrij' ? ' (vrij)' : ''}`).join('|'),
+  intuitief: r => r.constraints.map(c => `${c}=${r.intuitief.perConstraint[c] || ''}`).join('|'),
+  intuitief_opmerking: r => r.intuitief.opmerking,
+  tobe_requirements: r => r.tobeRequirements.join('|'),
+  views: r => r.views.join('|'),
+  acties: r => r.acties.map(actieTekst).join('|'),
+  acties_totaal: r => actiesTotaal(r),
+  beschrijving_actie: r => r.beschrijving,
+  behulpzaam_moment: r => r.behulpzaam.moment,
+  behulpzaam_herzien: r => { const h = behulpzaamHerzien(r); return h ? h.waarde : ''; },
+  behulpzaam_herzien_datum: r => { const h = behulpzaamHerzien(r); return h ? h.datum : ''; },
+  behulpzaam_herzieningen: r => r.behulpzaam.herzieningen.map(h => `${h.datum}: ${h.waarde}${h.opmerking ? ' (' + h.opmerking + ')' : ''}`).join('|'),
+  requirements: r => r.requirements.status,
+  requirements_ids: r => r.requirements.ids.join('|'),
+  requirements_verfijning: r => r.requirements.verfijning,
+  aft_datum: r => r.aft.datum,
+  aft_tijdstip: r => r.aft.tijd,
+  duur_min: r => duurMinuten(r),
+  aft_status: r => r.aft.parsed && r.aft.parsed.status,
+  aft_modus_output: r => r.aft.parsed && r.aft.parsed.modus,
+  aft_views: r => sel(r.aft.parsed, 'views'),
+  aft_elements: r => sel(r.aft.parsed, 'elements'),
+  aft_horizontal: r => sel(r.aft.parsed, 'horizontal'),
+  aft_vertical: r => sel(r.aft.parsed, 'vertical'),
+  aft_aantallen: r => aantallen(r.aft.parsed),
+  aft_screenshots: r => r.aft.screenshots.map(s => s.naam).join('|'),
+  gevolg: r => r.gevolg && r.gevolg.tekst,
+  gevolg_nieuw: r => r.gevolg && r.gevolg.nieuw.join('|'),
+  gevolg_verdwenen: r => r.gevolg && r.gevolg.verdwenen.join('|'),
+  gevolg_toegenomen: r => r.gevolg && r.gevolg.toegenomen.join('|'),
+  toename_meldingen: r => (r.gevolg ? toenameVan(r.gevolg) : ''),
+  nieuwe_meldingen_zeker: nieuwZeker,
+  nieuwe_meldingen_mogelijk: nieuwMogelijk,
+  waarschuwingen: r => r.waarschuwingen.join('|'),
+  parser_versie: r => (r.pre.parsed || r.aft.parsed || {}).parserVersie,
+  pre_validatoroutput: r => r.pre.output,
+  aft_validatoroutput: r => r.aft.output
+};
+
+/* Kolomvolgorde per type. COVO: de kolommen van v1, met de nieuwe kolommen achteraan vóór de ruwe teksten. */
+const ACTIES = '#acties';
+const CSV_VOLGORDE = {
+  covo: ['id', 'status', 'run', 'groep', 'pre_datum', 'pre_tijdstip', 'modus', 'validator_build', 'pre_status', 'pre_modus_output',
+    'pre_views', 'pre_elements', 'pre_horizontal', 'pre_vertical', 'pre_aantallen', 'pre_screenshots', 'constraints', 'meldingen',
+    'intuitief', 'intuitief_opmerking', 'views', 'acties', 'beschrijving_actie', 'behulpzaam_moment', 'behulpzaam_herzien',
+    'behulpzaam_herzien_datum', 'behulpzaam_herzieningen', 'requirements', 'requirements_ids', 'requirements_verfijning',
+    'aft_datum', 'aft_tijdstip', 'aft_status', 'aft_modus_output', 'aft_views', 'aft_elements', 'aft_horizontal', 'aft_vertical',
+    'aft_aantallen', 'aft_screenshots', 'gevolg', 'gevolg_nieuw', 'gevolg_verdwenen', 'gevolg_toegenomen', 'waarschuwingen',
+    'parser_versie', 'onderdeel', ACTIES, 'pre_validatoroutput', 'aft_validatoroutput'],
+  'tobe-zonder': ['id', 'status', 'onderdeel', 'run', 'pre_datum', 'pre_tijdstip', 'aft_datum', 'aft_tijdstip', 'duur_min',
+    'tobe_requirements', 'views', 'acties', ACTIES, 'acties_totaal', 'beschrijving_actie', 'pre_screenshots', 'aft_screenshots',
+    'aft_status', 'aft_aantallen', 'waarschuwingen', 'aft_validatoroutput'],
+  'tobe-met': ['id', 'status', 'onderdeel', 'run', 'recordtype', 'pre_datum', 'pre_tijdstip', 'aft_datum', 'aft_tijdstip', 'duur_min',
+    'tobe_requirements', 'modus', 'validator_build', 'constraints', 'meldingen', 'intuitief', 'intuitief_opmerking', 'views',
+    'acties', ACTIES, 'acties_totaal', 'beschrijving_actie', 'behulpzaam_moment', 'behulpzaam_herzien', 'behulpzaam_herzien_datum',
+    'pre_status', 'pre_aantallen', 'aft_status', 'aft_aantallen', 'gevolg', 'gevolg_nieuw', 'gevolg_verdwenen', 'gevolg_toegenomen',
+    'toename_meldingen', 'nieuwe_meldingen_zeker', 'nieuwe_meldingen_mogelijk', 'pre_screenshots', 'aft_screenshots',
+    'waarschuwingen', 'parser_versie', 'pre_validatoroutput', 'aft_validatoroutput']
+};
+
+function csvTekst(kop, rijen) {
+  return '﻿' + [kop.join(';'), ...rijen.map(r => r.map(csvWaarde).join(';'))].join('\r\n') + '\r\n';
+}
+function maakCsv(records, type) {
+  const kolommen = CSV_VOLGORDE[type].flatMap(k => (k === ACTIES ? actieKolommen().map(a => ({ naam: a, f: r => actieWaarde(r, a, type) })) : [{ naam: k, f: KOL[k] }]));
+  return csvTekst(kolommen.map(k => k.naam), chrono(records).map(r => kolommen.map(k => k.f(r))));
+}
+function maakVergelijkingCsv(v) {
+  const kop = ['requirement', 'records_zonder', 'records_met', 'wijzigingen_met', 'correcties_met', 'acties_zonder', 'acties_met',
+    'duur_min_zonder', 'duur_min_met', 'zonder_tijd_zonder', 'zonder_tijd_met', 'toename_meldingen_met', 'nieuwe_constraints_met',
+    ...actieKolommen().map(a => `zonder_${a}`), ...actieKolommen().map(a => `met_${a}`), 'runs_zonder', 'runs_met'];
+  const rij = x => [x.requirement, x.z.records, x.m.records, x.m.wijzigingen, x.m.correcties, x.z.actiesTotaal, x.m.actiesTotaal,
+    x.z.duur, x.m.duur, x.z.duurOnbekend, x.m.duurOnbekend, x.m.toename, x.m.nieuweConstraints,
+    ...OBJECTEN.flatMap(o => SOORTEN.map(s => x.z.acties[o][s])), ...OBJECTEN.flatMap(o => SOORTEN.map(s => x.m.acties[o][s])),
+    x.z.runs.join('|'), x.m.runs.join('|')];
+  return csvTekst(kop, [...v.rijen.map(rij), rij(v.totaal)]);
+}
+
+function download(naam, inhoud, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([inhoud], { type }));
+  a.download = naam;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+const bestandsdeel = s => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function exporteerCsv(data, onderdeel) {
+  const recs = data.records.filter(r => r.onderdeel === onderdeel.id);
+  download(`covo-log-${bestandsdeel(onderdeel.naam)}-${vandaag()}.csv`, maakCsv(recs, onderdeel.type), 'text/csv;charset=utf-8');
+}
+function exporteerVergelijkingCsv(v) {
+  download(`covo-log-vergelijking-tobe-${vandaag()}.csv`, maakVergelijkingCsv(v), 'text/csv;charset=utf-8');
+}
+function exporteerJson(data) {
+  const { werkversie, ...rest } = data;
+  download(`covo-log-export-${vandaag()}.json`, JSON.stringify(rest, null, 2), 'application/json');
+}
+
+</script>
+  <script>/* js/app.js */
+'use strict';
+/* Kern: toestand, gegevens & migratie, opslaan, opstart, navigatie, filters, lightbox.
+   Invoer staat in invoer.js, de weergaven in weergaven.js. */
+
+const S = {
+  data: null,            // inhoud van log.json
+  map: null,             // FileSystemDirectoryHandle
+  scherm: 'tijdlijn',
+  ed: null,              // { rec, origId, stap } – werkkopie in de invoer
+  filters: leegFilter(),
+  sort: { kol: 'datum', richting: 1 },
+  detailId: null,        // record open in de tabel-detailweergave
+  open: new Set(),       // opengeklapte records in de tijdlijn
+  alleenLezen: false
+};
+function leegFilter() { return { groep: '', constraint: '', tobereq: '', view: '', modus: '', recordtype: '', zoek: '' }; }
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+/* ================= gegevens ================= */
+
+const SCHEMA_VERSIE = 2;
+// Views zijn eigen aan elk model: voeg ze toe via Instellingen.
+const STANDAARD_VIEWS = [];
+function standaardOnderdelen() {
+  return [
+    { id: 'covo', naam: 'COVO-iteratie', type: 'covo', runPrefix: 'R' },
+    { id: 'tobe-zonder', naam: 'TO-BE – model zonder COVO', type: 'tobe-zonder', runPrefix: 'T1' },
+    { id: 'tobe-met', naam: 'TO-BE – model met COVO', type: 'tobe-met', runPrefix: 'T2' }
+  ];
+}
+function standaardInstellingen() {
+  return {
+    views: [...STANDAARD_VIEWS],
+    constraints: [...Array.from({ length: 13 }, (_, i) => `C${p2(i + 1)}`), 'M01', 'V01', 'V02'],
+    requirements: Array.from({ length: 8 }, (_, i) => `R${i + 1}`),
+    tobeRequirements: ['TB-R1', 'TB-R5', 'TB-R6', 'TB-R8', 'TB-R9'],
+    onderdelen: standaardOnderdelen()
+  };
+}
+function nieuweData() {
+  const settings = standaardInstellingen();
+  // Nieuw log: elk onderdeel een eigen (lege) viewlijst. Omgezette logs houden de gemeenschappelijke lijst tot je ze verdeelt.
+  settings.onderdelen.forEach(o => { o.views = []; });
+  return { schemaVersion: SCHEMA_VERSIE, settings, actiefOnderdeel: 'covo', migraties: [], records: [], werkversie: null };
+}
+function nieuwRecord(onderdeel = 'covo') {
+  return {
+    id: uid(), status: 'concept', aangemaakt: null, gewijzigd: null, run: '',
+    pre: { datum: vandaag(), tijd: nuTijd(), output: '', parsed: null, screenshots: [] },
+    modus: null, build: '',
+    constraints: [], meldingen: [],
+    intuitief: { perConstraint: {}, opmerking: '' },
+    views: [], acties: [], beschrijving: '',
+    behulpzaam: { moment: null, herzieningen: [] },
+    requirements: { status: null, ids: [], verfijning: '' },
+    aft: { datum: '', tijd: '', output: '', parsed: null, screenshots: [] },
+    gevolg: null, waarschuwingen: [], parseHistoriek: [],
+    onderdeel, recordtype: null, tobeRequirements: []
+  };
+}
+/* Vult ontbrekende velden aan; bestaande waarden blijven ongemoeid. */
+function vulRecordAan(r) {
+  if (!Array.isArray(r.views)) r.views = r.view ? [r.view] : []; // oud formaat (v1.0): één view
+  delete r.view;
+  for (const side of ['pre', 'aft']) { // oud formaat (v1.0): één screenshot per moment
+    const x = r[side];
+    if (!x || Array.isArray(x.screenshots)) continue;
+    x.screenshots = x.screenshot ? [{ naam: x.screenshot, eigen: !!x.screenshotEigen }] : [];
+    delete x.screenshot; delete x.screenshotEigen;
+  }
+  const n = nieuwRecord('covo');
+  for (const k of Object.keys(n)) {
+    if (r[k] === undefined) r[k] = n[k];
+    else if (n[k] && typeof n[k] === 'object' && !Array.isArray(n[k])) r[k] = Object.assign({}, n[k], r[k]);
+  }
+  return r;
+}
+function migreer(d) {
+  if (!d.schemaVersion || d.schemaVersion < SCHEMA_VERSIE) d.schemaVersion = SCHEMA_VERSIE;
+  d.settings = Object.assign(standaardInstellingen(), d.settings || {});
+  if (d.actiefOnderdeel === undefined) d.actiefOnderdeel = d.settings.onderdelen[0].id;
+  if (!Array.isArray(d.migraties)) d.migraties = [];
+  d.records = (d.records || []).map(vulRecordAan);
+  d.werkversie = d.werkversie || null;
+  if (d.werkversie) vulRecordAan(d.werkversie.rec);
+  return d;
+}
+/* Zelfcontrole: elk pad uit het origineel moet ongewijzigd aanwezig zijn in het resultaat. */
+const TOEGESTANE_WIJZIGINGEN = /^schemaVersion$|^(records\[\d+\]|werkversie\.rec)\.(view|(pre|aft)\.screenshot(Eigen)?)$/;
+function verschillen(a, b, pad = '', uit = []) {
+  if (uit.length > 25) return uit;
+  if (a === null || typeof a !== 'object') { if (a !== b) uit.push(pad || '(root)'); return uit; }
+  if (b === null || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) { uit.push(pad); return uit; }
+  if (Array.isArray(a)) {
+    if (a.length !== b.length) uit.push(`${pad} (lengte)`);
+    a.forEach((x, i) => verschillen(x, b[i], `${pad}[${i}]`, uit));
+    return uit;
+  }
+  for (const k of Object.keys(a)) verschillen(a[k], b[k], pad ? `${pad}.${k}` : k, uit);
+  return uit;
+}
+
+/* ---------- onderdelen ---------- */
+const onderdelen = () => S.data.settings.onderdelen;
+const onderdeelVan = id => onderdelen().find(o => o.id === id) || null;
+const actief = () => onderdeelVan(S.data.actiefOnderdeel) || onderdelen()[0];
+const typeVan = r => (onderdeelVan(r.onderdeel) || { type: 'covo' }).type;
+/* Views van een onderdeel. Onderdelen zonder eigen lijst (logs van vóór v2.1) gebruiken de gemeenschappelijke lijst. */
+const viewsVan = o => (o && Array.isArray(o.views) ? o.views : S.data.settings.views);
+const recsVan = id => S.data.records.filter(r => r.onderdeel === id);
+const recsActief = () => recsVan(actief().id);
+const zoek = id => S.data.records.find(r => r.id === id);
+
+/* Vorig record binnen hetzelfde onderdeel. */
+function vorigBinnen(onderdeelId, origId) {
+  const lijst = chrono(recsVan(onderdeelId));
+  if (!origId) return lijst[lijst.length - 1] || null;
+  const i = lijst.findIndex(r => r.id === origId);
+  return i > 0 ? lijst[i - 1] : null;
+}
+/* Eindtoestand van de COVO-iteratie: startpunt voor het eerste record van TO-BE met COVO. */
+function laatsteCovo() {
+  const ids = onderdelen().filter(o => o.type === 'covo').map(o => o.id);
+  const lijst = chrono(S.data.records.filter(r => ids.includes(r.onderdeel)));
+  return lijst[lijst.length - 1] || null;
+}
+function vorigVoor(rec, origId) {
+  const v = vorigBinnen(rec.onderdeel, origId);
+  if (v) return v;
+  return typeVan(rec) === 'tobe-met' ? laatsteCovo() : null;
+}
+
+/* ================= opslaan & meldingen ================= */
+
+let saveTimer = null, savePending = false;
+function bewaarLog(direct) {
+  if (S.alleenLezen || !S.map) return;
+  clearTimeout(saveTimer);
+  savePending = true;
+  const doe = () => {
+    zetStatus('Opslaan…');
+    Opslag.schrijfLog(S.map, S.data)
+      .then(() => { savePending = false; zetStatus('Opgeslagen ' + nuTijd()); })
+      .catch(e => { zetStatus('Fout bij opslaan!', true); toonMelding('Opslaan mislukt: ' + e.message, 'fout'); });
+  };
+  if (direct) doe(); else saveTimer = setTimeout(doe, 700);
+}
+function bewaarWerkversie() { S.data.werkversie = S.ed; bewaarLog(); }
+function zetStatus(t, fout) { const el = $('#opslagstatus'); el.textContent = t; el.classList.toggle('fout', !!fout); }
+
+let meldingTimer = null;
+function toonMelding(t, soort = 'info') {
+  const el = $('#melding');
+  el.className = soort; el.textContent = t; el.hidden = false;
+  clearTimeout(meldingTimer);
+  if (soort !== 'fout') meldingTimer = setTimeout(() => { el.hidden = true; }, 7000);
+  else el.onclick = () => { el.hidden = true; };
+}
+function bevestig(html, jaTekst = 'Bevestigen', gevaar = false) {
+  return new Promise(res => {
+    const d = $('#dlg'), ja = $('#dlg-ja'), nee = $('#dlg-nee');
+    $('#dlg-inhoud').innerHTML = html;
+    ja.textContent = jaTekst;
+    ja.classList.toggle('gevaar', gevaar);
+    let klaar = false;
+    const sluit = v => { if (klaar) return; klaar = true; d.close(); res(v); };
+    ja.onclick = () => sluit(true);
+    nee.onclick = () => sluit(false);
+    d.oncancel = () => sluit(false);
+    d.showModal();
+  });
+}
+
+/* ================= opstart ================= */
+
+document.addEventListener('DOMContentLoaded', start);
+window.addEventListener('beforeunload', e => { if (savePending) { e.preventDefault(); e.returnValue = ''; } });
+
+async function start() {
+  $('#nav').addEventListener('click', e => {
+    const b = e.target.closest('[data-scherm]');
+    if (!b || !S.data) return;
+    if (window.COVO_VIEWER && ['invoer', 'instellingen'].includes(b.dataset.scherm)) return;
+    if (b.dataset.scherm === 'invoer' && !S.ed) { startNieuw(); return; }
+    S.scherm = b.dataset.scherm;
+    if (S.scherm !== 'tabel') S.detailId = null;
+    render();
+  });
+  $('#onderdeel').addEventListener('change', e => kiesOnderdeel(e.target.value));
+  $('#btn-csv').addEventListener('click', () => S.data && exporteerCsv(S.data, actief()));
+  $('#btn-json').addEventListener('click', () => S.data && exporteerJson(S.data));
+  bindLightbox();
+  bindToetsen();
+
+  if (window.COVO_VIEWER) { startViewer(); return; }
+  if (!('showDirectoryPicker' in window)) { toonStart('geenapi'); return; }
+  let h = null;
+  try { h = await Opslag.haalBewaardeMap(); } catch (e) { /* geen bewaarde map */ }
+  if (!h) { toonStart('kies'); return; }
+  if (await Opslag.toestemming(h, false)) await openMap(h);
+  else toonStart('hervat', h);
+}
+
+function toonStart(soort, h) {
+  document.body.classList.remove('geladen');
+  const m = $('#main');
+  if (soort === 'geenapi') {
+    m.innerHTML = `<section class="kaart start"><h2>Browser niet ondersteund</h2>
+      <p>Deze tool gebruikt de File System Access API. Open <code>index.html</code> in Google Chrome of Microsoft Edge.</p></section>`;
+    return;
+  }
+  m.innerHTML = soort === 'hervat'
+    ? `<section class="kaart start"><h2>Toegang tot de gegevensmap</h2>
+        <p>De tool werkte met de map <b>${esc(h.name)}</b>. De browser vraagt opnieuw toestemming om die map te lezen en te schrijven.</p>
+        <p><button class="primair" id="st-hervat">Toegang geven tot “${esc(h.name)}”</button> <button id="st-kies">Andere map kiezen</button></p></section>`
+    : `<section class="kaart start"><h2>Welkom</h2>
+        <p>Kies de map waarin de log bewaard wordt, bijvoorbeeld een map in OneDrive. De tool maakt daarin <code>log.json</code>, dagelijkse back-ups en een map <code>screenshots/</code>.</p>
+        <p><button class="primair" id="st-kies">Gegevensmap kiezen</button></p></section>`;
+  const hv = $('#st-hervat');
+  if (hv) hv.addEventListener('click', async () => { if (await Opslag.toestemming(h, true)) openMap(h); });
+  $('#st-kies').addEventListener('click', kiesAndereMap);
+}
+async function kiesAndereMap() {
+  try { await openMap(await Opslag.kiesMap()); }
+  catch (e) { if (e.name !== 'AbortError') toonMelding(e.message, 'fout'); }
+}
+/* Viewer (covo-viewer.html op een webserver): leest log.json naast de pagina, alleen-lezen, schrijft nooit. */
+async function startViewer() {
+  document.body.classList.add('viewer');
+  S.alleenLezen = true;
+  const fout = (titel, html) => { $('#main').innerHTML = `<section class="kaart start"><h2>${titel}</h2>${html}</section>`; };
+  let tekst;
+  try {
+    const r = await fetch('log.json', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    tekst = await r.text();
+  } catch (e) {
+    fout('Log niet gevonden', `<p>Zet <code>log.json</code> en de map <code>screenshots/</code> in dezelfde map als deze pagina, op een webserver (${esc(e.message)}).</p>`);
+    return;
+  }
+  let d;
+  try { d = JSON.parse(tekst); }
+  catch (e) { fout('log.json is beschadigd', `<p>${esc(e.message)}</p>`); return; }
+  if ((d.schemaVersion || 1) > SCHEMA_VERSIE) { fout('Log is nieuwer dan deze viewer', '<p>Gebruik een recentere versie van de viewer.</p>'); return; }
+  S.data = migreer(d); // alleen in het geheugen
+  S.data.werkversie = null;
+  const laatst = S.data.records.map(r => r.gewijzigd || '').sort().pop();
+  $('#mapnaam').textContent = `Alleen-lezen${laatst ? ` · stand van ${toonDatum(laatst)}` : ''}`;
+  document.body.classList.add('geladen');
+  S.scherm = 'tabel';
+  render();
+}
+function toonBlokkade(titel, html) {
+  S.alleenLezen = true;
+  document.body.classList.remove('geladen');
+  $('#main').innerHTML = `<section class="kaart start"><h2>${titel}</h2>${html}
+    <p>De tool schrijft niets weg zolang dit niet opgelost is.</p></section>`;
+}
+async function openMap(h) {
+  S.map = h; S.ed = null; S.open.clear(); S.detailId = null; S.filters = leegFilter(); S.alleenLezen = false;
+  try { await Opslag.onthoudMap(h); } catch (e) { /* niet fataal */ }
+  $('#mapnaam').textContent = '📁 ' + h.name;
+  let t;
+  try { t = await Opslag.leesTekst(h, 'log.json'); }
+  catch (e) { toonMelding('log.json kan niet gelezen worden: ' + e.message, 'fout'); return; }
+  if (t === null) {
+    S.data = nieuweData();
+    bewaarLog(true);
+  } else {
+    let ruw;
+    try { ruw = JSON.parse(t); }
+    catch (e) {
+      toonBlokkade('log.json is beschadigd', `<p>${esc(e.message)}</p><p>Herstel eventueel een <code>log.backup-…json</code> door het te hernoemen naar <code>log.json</code>.</p>`);
+      return;
+    }
+    const versie = ruw.schemaVersion || 1;
+    if (versie > SCHEMA_VERSIE) {
+      toonBlokkade('Log is nieuwer dan deze tool', `<p>Dit log heeft schemaversie ${versie}; deze tool kent versie ${SCHEMA_VERSIE}. Gebruik een recentere versie van de tool.</p>`);
+      return;
+    }
+    if (versie < SCHEMA_VERSIE) {
+      if (!(await migreerMetBackup(h, t, versie))) return;
+    } else S.data = migreer(ruw);
+  }
+  document.body.classList.add('geladen');
+  S.scherm = 'tijdlijn';
+  if (S.data.werkversie) {
+    S.ed = S.data.werkversie;
+    S.data.actiefOnderdeel = S.ed.rec.onderdeel;
+    S.scherm = 'invoer';
+    toonMelding('Niet-bewaarde invoer van de vorige keer is hersteld.');
+  }
+  render();
+}
+/* Migratie: 1) back-up schrijven en controleren, 2) migreren in het geheugen,
+   3) zelfcontrole (niets gewijzigd of verwijderd), 4) pas dan wegschrijven. */
+async function migreerMetBackup(h, tekst, vanVersie) {
+  let backup;
+  try { backup = await Opslag.backupVoorMigratie(h); }
+  catch (e) {
+    toonBlokkade('Migratie gestopt', `<p>De back-up vóór de migratie kon niet veilig geschreven worden: ${esc(e.message)}</p>`);
+    return false;
+  }
+  const d = migreer(JSON.parse(tekst));
+  const fout = verschillen(JSON.parse(tekst), d).filter(p => !TOEGESTANE_WIJZIGINGEN.test(p));
+  if (fout.length) {
+    toonBlokkade('Migratie gestopt', `<p>De zelfcontrole vond gewijzigde of ontbrekende waarden:</p><ul>${fout.slice(0, 10).map(p => `<li><code>${esc(p)}</code></li>`).join('')}</ul>
+      <p><code>log.json</code> is niet aangepast. De back-up staat in <code>${esc(backup)}</code>.</p>`);
+    return false;
+  }
+  d.migraties.push({ van: vanVersie, naar: SCHEMA_VERSIE, datum: isoNu(), backup });
+  S.data = d;
+  bewaarLog(true);
+  toonMelding(`Log omgezet naar versie ${SCHEMA_VERSIE} (${d.records.length} records). Back-up van vóór de omzetting: ${backup}.`);
+  return true;
+}
+
+/* ================= render & navigatie ================= */
+
+function kiesOnderdeel(id) {
+  if (S.ed || !onderdeelVan(id)) return;
+  S.data.actiefOnderdeel = id;
+  S.filters = leegFilter(); S.open.clear(); S.detailId = null;
+  bewaarLog();
+  render();
+}
+function render() {
+  const o = actief();
+  document.body.dataset.type = o.type;
+  const sel = $('#onderdeel');
+  sel.innerHTML = onderdelen().map(x => `<option value="${esc(x.id)}" ${x.id === o.id ? 'selected' : ''}>${esc(x.naam)}</option>`).join('');
+  sel.disabled = !!S.ed;
+  sel.title = S.ed ? 'Rond eerst de invoer af of annuleer ze.' : '';
+  const heeftTobe = ['tobe-zonder', 'tobe-met'].every(t => onderdelen().some(x => x.type === t));
+  $('#nav-vergelijking').hidden = !heeftTobe;
+  if (S.scherm === 'vergelijking' && !heeftTobe) S.scherm = 'tijdlijn';
+  $$('#nav [data-scherm]').forEach(b => b.classList.toggle('actief', b.dataset.scherm === S.scherm));
+  $('#nav-invoer').textContent = S.ed ? '✎ Invoer (bezig)' : '+ Nieuw record';
+  $('#btn-csv').title = `CSV van “${o.naam}”`;
+  const m = $('#main');
+  if (S.scherm === 'invoer' && S.ed) renderEditor(m);
+  else if (S.scherm === 'tabel') renderTabel(m);
+  else if (S.scherm === 'overzicht') renderOverzicht(m);
+  else if (S.scherm === 'vergelijking') renderVergelijking(m);
+  else if (S.scherm === 'instellingen') renderInstellingen(m);
+  else { S.scherm = 'tijdlijn'; renderTijdlijn(m); }
+}
+
+/* ================= filters & zoeken ================= */
+
+function filterBalk(alleRecs, type) {
+  const f = S.filters;
+  const sel = (naam, label, opties) => `<label>${label} <select data-filter="${naam}"><option value="">alle</option>${opties.map(([v, l]) => `<option value="${esc(v)}" ${String(f[naam]) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  const groepen = [...new Set(alleRecs.map(r => groepVan(r.run)).filter(g => g !== null))].sort((a, b) => a - b);
+  const cons = [...new Set(alleRecs.flatMap(r => r.constraints))].sort();
+  const treqs = [...new Set([...S.data.settings.tobeRequirements, ...alleRecs.flatMap(r => r.tobeRequirements)])];
+  const views = [...new Set([...viewsVan(actief()), ...alleRecs.flatMap(r => r.views)])];
+  const delen = [];
+  if (type === 'covo') delen.push(sel('groep', 'Groep', groepen.map(g => [g, 'Groep ' + g])));
+  if (type === 'tobe-met') delen.push(sel('recordtype', 'Type', Object.entries(LABELS.recordtype)));
+  if (type !== 'covo') delen.push(sel('tobereq', 'Requirement', treqs.map(q => [q, q])));
+  if (type !== 'tobe-zonder') delen.push(sel('constraint', 'Constraint', cons.map(c => [c, c])));
+  delen.push(sel('view', 'View', views.map(v => [v, v])));
+  if (type !== 'tobe-zonder') delen.push(sel('modus', 'Modus', Object.entries(LABELS.modus)));
+  delen.push(`<label>Zoeken <input type="search" data-filter="zoek" value="${esc(f.zoek)}" placeholder="in run en beschrijving"></label>`);
+  return `<div class="filters">${delen.join('')}
+    ${Object.values(f).some(Boolean) ? '<button type="button" class="klein" data-action="wis-filters">Filters wissen</button>' : ''}</div>`;
+}
+function pasFilterToe(recs) {
+  const f = S.filters, z = f.zoek.trim().toLowerCase();
+  return recs.filter(r =>
+    (!f.groep || String(groepVan(r.run)) === String(f.groep)) &&
+    (!f.constraint || r.constraints.includes(f.constraint)) &&
+    (!f.tobereq || r.tobeRequirements.includes(f.tobereq)) &&
+    (!f.view || r.views.includes(f.view)) &&
+    (!f.modus || r.modus === f.modus) &&
+    (!f.recordtype || r.recordtype === f.recordtype) &&
+    (!z || `${r.run}\n${r.beschrijving}`.toLowerCase().includes(z)));
+}
+function bindFilters(m) {
+  m.addEventListener('change', ev => {
+    const s = ev.target.closest('select[data-filter]');
+    if (s) { S.filters[s.dataset.filter] = s.value; S.detailId = null; render(); }
+  });
+  m.addEventListener('input', ev => {
+    const z = ev.target.closest('input[data-filter="zoek"]');
+    if (!z) return;
+    S.filters.zoek = z.value; S.detailId = null;
+    const pos = z.selectionStart;
+    render();
+    const nieuw = $('input[data-filter="zoek"]');
+    if (nieuw) { nieuw.focus(); nieuw.setSelectionRange(pos, pos); }
+  });
+  m.addEventListener('click', ev => {
+    if (ev.target.closest('[data-action="wis-filters"]')) { S.filters = leegFilter(); S.detailId = null; render(); }
+  });
+}
+
+/* ================= lightbox ================= */
+
+/* Alle screenshots van een reeks records, in volgorde: per record PRE 1..n, dan AFT 1..n. */
+function lbItems(recs) {
+  return recs.flatMap(r => ['pre', 'aft'].flatMap(side => r[side].screenshots.map((s, i) => ({
+    naam: s.naam, eigen: s.eigen, run: r.run || '(geen run)', recId: r.id, side, nr: i + 1, van: r[side].screenshots.length
+  }))));
+}
+const LB = { items: [], i: 0 };
+function openLightbox(items, index) {
+  if (!items.length) return;
+  LB.items = items; LB.i = Math.max(0, Math.min(index, items.length - 1));
+  $('#lb').hidden = false;
+  toonLightbox();
+}
+async function toonLightbox() {
+  const it = LB.items[LB.i];
+  $('#lb-run').textContent = it.run;
+  const m = $('#lb-moment');
+  m.textContent = `${it.side.toUpperCase()} ${it.nr}/${it.van}`;
+  m.className = 'lb-moment ' + it.side;
+  $('#lb-naam').textContent = it.naam + (it.side === 'pre' && !it.eigen ? ' (overgenomen van vorig record)' : '');
+  $('#lb-teller').textContent = `${LB.i + 1} / ${LB.items.length}`;
+  $('#lb-vorige').disabled = LB.i === 0;
+  $('#lb-volgende').disabled = LB.i === LB.items.length - 1;
+  const img = $('#lb-img');
+  img.removeAttribute('src');
+  img.alt = `${it.run} ${it.side.toUpperCase()} ${it.nr}`;
+  const url = await Opslag.screenshotUrl(S.map, it.naam);
+  if (LB.items[LB.i] === it) { if (url) img.src = url; else img.alt = 'Bestand niet gevonden: ' + it.naam; }
+}
+function bladerLightbox(naar) {
+  const j = Math.max(0, Math.min(naar, LB.items.length - 1));
+  if (j !== LB.i) { LB.i = j; toonLightbox(); }
+}
+const sluitLightbox = () => { $('#lb').hidden = true; };
+function bindLightbox() {
+  $('#lb-sluit').addEventListener('click', sluitLightbox);
+  $('#lb-vorige').addEventListener('click', () => bladerLightbox(LB.i - 1));
+  $('#lb-volgende').addEventListener('click', () => bladerLightbox(LB.i + 1));
+  $('#lb').addEventListener('click', ev => { if (ev.target.classList.contains('lb-beeld')) sluitLightbox(); });
+}
+
+/* Pijltjestoetsen: in de lightbox door de afbeeldingen, anders in de detailweergave door de records. */
+function bindToetsen() {
+  document.addEventListener('keydown', ev => {
+    if (!$('#lb').hidden) {
+      const acties = {
+        ArrowLeft: () => bladerLightbox(LB.i - 1), ArrowUp: () => bladerLightbox(LB.i - 1),
+        ArrowRight: () => bladerLightbox(LB.i + 1), ArrowDown: () => bladerLightbox(LB.i + 1),
+        Home: () => bladerLightbox(0), End: () => bladerLightbox(LB.items.length - 1),
+        Escape: sluitLightbox
+      };
+      if (acties[ev.key]) { ev.preventDefault(); acties[ev.key](); }
+      return;
+    }
+    if ($('#dlg').open || S.scherm !== 'tabel' || !S.detailId) return;
+    if (ev.target instanceof Element && ev.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') { ev.preventDefault(); bladerDetail(-1); }
+    else if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') { ev.preventDefault(); bladerDetail(1); }
+    else if (ev.key === 'Escape') { S.detailId = null; render(); }
+  });
+}
+
+</script>
+  <script>/* js/invoer.js */
+'use strict';
+/* Invoer in drie stappen. Het formulier hangt af van het type van het onderdeel:
+   covo (COVO-iteratie), tobe-zonder (TO-BE, model zonder COVO), tobe-met (TO-BE, model met COVO). */
+
+let edItems = {};        // meldingen per constraint zoals getoond in stap 2
+const liveCache = { pre: { t: null, p: null }, aft: { t: null, p: null } };
+
+const edOnderdeel = () => onderdeelVan(S.ed.rec.onderdeel) || actief();
+const edType = () => edOnderdeel().type;
+const isCorrectie = () => edType() === 'tobe-met' && S.ed.rec.recordtype === 'correctie';
+const toontConstraints = () => edType() === 'covo' || isCorrectie();
+
+function startNieuw() {
+  const o = actief();
+  const r = nieuwRecord(o.id);
+  const vorigEigen = vorigBinnen(o.id, null);
+  r.run = vorigEigen ? (volgendeRun(vorigEigen.run) || eersteRun(o)) : eersteRun(o);
+  const bron = vorigVoor(r, null);
+  if (bron) {
+    r.pre.screenshots = bron.aft.screenshots.map(s => ({ naam: s.naam, eigen: false }));
+    if (o.type !== 'tobe-zonder') { r.pre.output = bron.aft.output || ''; r.build = bron.build || ''; }
+  }
+  if (o.type === 'tobe-met') r.recordtype = 'wijziging';
+  if (o.type !== 'tobe-zonder') r.modus = parseValidatorOutput(r.pre.output).modus;
+  S.ed = { rec: r, origId: null, stap: 1 };
+  S.scherm = 'invoer';
+  bewaarWerkversie();
+  render();
+}
+async function startBewerken(id) {
+  if (S.ed && !(await bevestig('<p>Er is al een invoer bezig. Die werkkopie gaat verloren. Doorgaan?</p>', 'Doorgaan', true))) return;
+  const o = zoek(id);
+  S.ed = { rec: structuredClone(o), origId: id, stap: o.status === 'concept' ? (o.aft.output || o.aft.datum ? 3 : 2) : 1 };
+  S.data.actiefOnderdeel = o.onderdeel;
+  S.scherm = 'invoer';
+  bewaarWerkversie();
+  render();
+}
+const origRec = () => (S.ed && S.ed.origId ? zoek(S.ed.origId) : null);
+
+/* Geparste gegevens om te tonen: vastgelegd (indien tekst ongewijzigd) of live. */
+function parsedVoor(side) {
+  const r = S.ed.rec, o = origRec();
+  if (o && o[side].parsed && o[side].output === r[side].output) return { p: o[side].parsed, vast: true };
+  const c = liveCache[side];
+  if (c.t !== r[side].output) { c.t = r[side].output; c.p = parseValidatorOutput(c.t); }
+  return { p: c.p, vast: false };
+}
+
+const veld = (label, inhoud, extra = '') => `<label class="veld ${extra}"><span class="label">${label}</span>${inhoud}</label>`;
+const radio = (bind, waarde, label, huidig, naam) =>
+  `<label class="keuze"><input type="radio" name="${naam || bind}" data-bind="${bind}" value="${waarde}" ${huidig === waarde ? 'checked' : ''}> ${label}</label>`;
+
+function outputBlok(side, label, openAlsLeeg = true) {
+  const t = S.ed.rec[side].output;
+  return `<details class="output" id="${side}-details" ${!t && openAlsLeeg ? 'open' : ''}>
+    <summary><b>${label}</b> <span class="samenv" id="${side}-samenv"></span></summary>
+    <div class="output-grid">
+      <textarea data-bind="${side}.output" spellcheck="false" rows="20" placeholder="Plak hier de volledige validatoroutput (Ctrl+V)">${esc(t)}</textarea>
+      <div class="parsed" id="${side}-parsed"></div>
+    </div>
+  </details>`;
+}
+const shotBlok = (side, label) =>
+  `<div class="veld"><span class="label">${label} <small class="hint">screenshot n vóór hoort bij screenshot n na</small></span><div class="shots-lijst" id="${side}-shots"></div></div>`;
+
+function renderEditor(m) {
+  const e = S.ed, r = e.rec, inst = S.data.settings, o = edOnderdeel(), type = o.type;
+  const metValidator = type !== 'tobe-zonder';
+  const eigenViews = viewsVan(o);
+  const views = [...eigenViews, ...r.views.filter(v => !eigenViews.includes(v))];
+  const stappen = type === 'tobe-zonder'
+    ? ['1 · Start', '2 · Wijziging', '3 · Einde']
+    : ['1 · Opstart <small>run vóór</small>', '2 · Wijziging', '3 · Afsluiting <small>run na</small>'];
+  m.innerHTML = `
+  <section class="editor kaart">
+    <div class="ed-kop">
+      <span class="badge onderdeel">${esc(o.naam)}</span>
+      <h2>${e.origId ? `Record ${esc(zoek(e.origId).run)} bewerken` : 'Nieuw record'}</h2>
+      <span class="badge ${r.status}">${r.status}</span>
+    </div>
+    <div id="ed-info"></div>
+    <div id="ed-warn"></div>
+    <div class="tabs" role="tablist">${stappen.map((s, i) => `<button type="button" data-stap="${i + 1}">${s}</button>`).join('')}</div>
+
+    <div class="paneel" data-paneel="1">
+      <div class="rij">
+        ${veld(type === 'tobe-zonder' ? 'Datum start' : 'Pre_Datum', `<input type="date" data-bind="pre.datum" value="${esc(r.pre.datum)}">`)}
+        ${veld(type === 'tobe-zonder' ? 'Tijdstip start' : 'Pre_Tijdstip', `<input type="time" step="1" data-bind="pre.tijd" value="${esc(r.pre.tijd)}">`)}
+        ${veld('Run', `<input type="text" data-bind="run" value="${esc(r.run)}" placeholder="${esc(eersteRun(o))}" class="kort">`)}
+        ${metValidator ? veld('Validator build', `<input type="text" data-bind="build" value="${esc(r.build)}">`, 'breed') : ''}
+      </div>
+      ${type === 'tobe-met' ? `<div class="veld"><span class="label">Soort record</span><div class="keuzes">
+        ${radio('recordtype', 'wijziging', 'TO-BE-wijziging', r.recordtype)}${radio('recordtype', 'correctie', 'COVO-correctie (meldingen oplossen na een wijziging)', r.recordtype)}</div></div>` : ''}
+      ${metValidator ? `<div class="veld"><span class="label">Modus</span><div class="keuzes" id="ed-modus">
+        ${radio('modus', 'construction', 'Construction', r.modus)}${radio('modus', 'audit', 'Audit', r.modus)}
+        <small class="hint">automatisch uit de output, aanpasbaar</small></div></div>
+      ${outputBlok('pre', 'Pre_Validatoroutput')}` : ''}
+      ${shotBlok('pre', type === 'tobe-zonder' ? 'Screenshot(s) vóór' : 'Pre_Screenshot')}
+    </div>
+
+    <div class="paneel" data-paneel="2">
+      ${toontConstraints() ? `
+      <div class="veld"><span class="label">Constraint(s)</span>
+        <div id="ed-constraints"></div>
+        <div class="inline"><input type="text" id="ed-vrijc" placeholder="Andere constraint, bv. C14" class="kort">
+          <button type="button" data-action="c-add">Toevoegen</button></div>
+      </div>
+      <div class="veld"><span class="label">Melding(en) en intuïtief — per aangevinkte constraint</span><div id="ed-meldingen"></div></div>
+      ${veld('Opmerking bij intuïtief (optioneel)', `<input type="text" data-bind="intuitief.opmerking" value="${esc(r.intuitief.opmerking)}" placeholder="bv. tekst van de melding onduidelijk of fout geformuleerd">`)}` : ''}
+      ${type !== 'covo' ? `<div class="veld"><span class="label">${isCorrectie() ? 'Hoort bij TO-BE-requirement(s)' : 'TO-BE-requirement(s)'} <small class="hint">meerdere mogelijk</small></span><div id="ed-tobereq"></div></div>` : ''}
+      <div class="veld"><span class="label">View(s) <small class="hint">meerdere mogelijk</small></span>
+        ${views.length
+          ? `<div class="viewlijst">${views.map(v => `<label class="item"><input type="checkbox" data-view="${esc(v)}" ${r.views.includes(v) ? 'checked' : ''}> <span>${esc(v)}</span></label>`).join('')}</div>`
+          : `<p class="leeg">Nog geen views voor “${esc(o.naam)}”. Voeg ze toe via Instellingen.</p>`}</div>
+      <div class="veld"><span class="label">Uitgevoerde actie${type === 'covo' ? ' <small class="hint">aantal optioneel</small>' : ' — aantallen'}</span><div id="ed-acties"></div></div>
+      <label class="veld"><span class="label" id="lbl-beschr">Beschrijving actie</span><textarea data-bind="beschrijving" rows="3">${esc(r.beschrijving)}</textarea></label>
+      ${type !== 'tobe-zonder' ? `<div class="veld"><span class="label">Behulpzaam${type === 'tobe-met' ? ' <small class="hint">hielp de validator bij deze wijziging? Nvt als hij niets te melden had</small>' : ''}</span><div id="ed-behulpzaam"></div></div>` : ''}
+      ${type === 'covo' ? '<div class="veld"><span class="label">Requirements</span><div id="ed-req"></div></div>' : ''}
+    </div>
+
+    <div class="paneel" data-paneel="3">
+      <div class="rij">
+        ${veld(type === 'tobe-zonder' ? 'Datum einde' : 'Aft_Datum', `<input type="date" data-bind="aft.datum" value="${esc(r.aft.datum)}">`)}
+        ${veld(type === 'tobe-zonder' ? 'Tijdstip einde' : 'Aft_Tijdstip', `<input type="time" step="1" data-bind="aft.tijd" value="${esc(r.aft.tijd)}">`)}
+        <div class="veld"><span class="label">&nbsp;</span><button type="button" data-action="aft-nu">Nu</button></div>
+        <div class="veld"><span class="label">Duur</span><div id="ed-duur" class="duur"></div></div>
+      </div>
+      ${metValidator ? outputBlok('aft', 'Aft_Validatoroutput') : outputBlok('aft', 'Validatoroutput (ter info, optioneel) — één eindrun, zonder gevolgberekening', false)}
+      ${shotBlok('aft', type === 'tobe-zonder' ? 'Screenshot(s) na' : 'Aft_Screenshot')}
+      ${metValidator ? '<div class="veld"><span class="label">Gevolg <small class="hint">automatisch berekend</small></span><div id="ed-gevolg"></div></div>' : ''}
+    </div>
+
+    <div class="ed-voet">
+      <button type="button" data-action="annuleer">Annuleren</button>
+      <span class="flex"></span>
+      <button type="button" data-action="vorige">← Vorige stap</button>
+      <button type="button" data-action="volgende" class="volgende">Volgende stap →</button>
+      <button type="button" data-action="concept">Bewaar als concept</button>
+      <button type="button" data-action="afronden" class="primair">Afronden en bewaren</button>
+    </div>
+  </section>`;
+
+  const sec = $('.editor', m);
+  sec.addEventListener('input', onEdInput);
+  sec.addEventListener('change', onEdInput);
+  sec.addEventListener('click', onEdClick);
+  sec.addEventListener('paste', onEdPaste);
+  sec.addEventListener('dragover', ev => { const v = ev.target.closest('.plakvak'); if (v) { ev.preventDefault(); v.classList.add('sleep'); } });
+  sec.addEventListener('dragleave', ev => { const v = ev.target.closest('.plakvak'); if (v) v.classList.remove('sleep'); });
+  sec.addEventListener('drop', onEdDrop);
+  const vrijc = $('#ed-vrijc');
+  if (vrijc) vrijc.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); voegConstraintToe(); } });
+
+  toonStap();
+  renderInfo();
+  renderParsed('pre'); renderParsed('aft');
+  renderConstraints(); renderMeldingen(); renderTobeReq(); renderActies();
+  renderBehulpzaam(); renderReq();
+  renderShots('pre'); renderShots('aft');
+  renderGevolg(); renderDuur(); renderWarn();
+}
+
+function toonStap() {
+  const s = S.ed.stap;
+  $$('.editor [data-stap]').forEach(b => b.classList.toggle('actief', +b.dataset.stap === s));
+  $$('.editor [data-paneel]').forEach(p => { p.hidden = +p.dataset.paneel !== s; });
+  $('.editor [data-action="vorige"]').disabled = s === 1;
+  $('.editor [data-action="volgende"]').disabled = s === 3;
+}
+
+function renderInfo() {
+  const el = $('#ed-info'), r = S.ed.rec;
+  if (S.ed.origId) { el.innerHTML = ''; return; }
+  const eigen = vorigBinnen(r.onderdeel, null), bron = vorigVoor(r, null), type = edType();
+  const info = [];
+  if (eigen) info.push(`Vorig record in dit onderdeel: <b>${esc(eigen.run)}</b>.`);
+  else info.push('Eerste record van dit onderdeel.');
+  if (bron && bron !== eigen) info.push(`Startpunt overgenomen van de eindtoestand van de COVO-iteratie (<b>${esc(bron.run)}</b>): validatoroutput en screenshots.`);
+  else if (bron && type !== 'tobe-zonder') {
+    if (!bron.aft.output) info.push('Dat record heeft nog geen Aft_Validatoroutput (concept), dus Pre_Validatoroutput is leeg.');
+    else if (r.pre.output === bron.aft.output) info.push('Pre_Validatoroutput en Pre_Screenshot zijn overgenomen van de afsluiting van dat record.');
+  } else if (bron && bron.aft.screenshots.length) info.push('Screenshots vóór zijn overgenomen van het einde van dat record.');
+  el.innerHTML = `<p class="info">${info.join(' ')}</p>`;
+}
+
+function onEdInput(ev) {
+  const t = ev.target, r = S.ed.rec, d = t.dataset;
+  if (d.bind) {
+    if (t.type === 'radio' && !t.checked) return;
+    zetPad(r, d.bind, t.value);
+    naBinding(d.bind, t);
+  } else if (d.c !== undefined) {
+    if (t.checked) { if (!r.constraints.includes(d.c)) r.constraints.push(d.c); }
+    else r.constraints = r.constraints.filter(c => c !== d.c);
+    renderMeldingen();
+  } else if (d.m !== undefined) {
+    const tekst = edItems[d.m][+d.i];
+    r.meldingen = r.meldingen.filter(x => !(x.constraint === d.m && x.bron === 'output' && x.tekst === tekst));
+    if (t.checked) r.meldingen.push({ constraint: d.m, tekst, bron: 'output' });
+  } else if (d.vrij !== undefined) {
+    r.meldingen = r.meldingen.filter(x => !(x.constraint === d.vrij && x.bron === 'vrij'));
+    if (t.value.trim()) r.meldingen.push({ constraint: d.vrij, tekst: t.value, bron: 'vrij' });
+  } else if (d.int !== undefined) {
+    if (t.checked) r.intuitief.perConstraint[d.int] = t.value;
+  } else if (d.actie !== undefined) {
+    const [object, soort] = d.actie.split('|');
+    r.acties = r.acties.filter(a => !(a.object === object && (a.soort || null) === (soort || null)));
+    if (t.checked) r.acties.push(soort ? { object, soort } : { object });
+    else { const n = $(`[data-aantal="${d.actie}"]`); if (n) n.value = ''; }
+    zetBeschrijvingLabel();
+  } else if (d.aantal !== undefined) {
+    zetAantal(d.aantal, t.value);
+    if (ev.type === 'change') renderActies();
+  } else if (d.view !== undefined) {
+    r.views = r.views.filter(v => v !== d.view);
+    if (t.checked) r.views.push(d.view);
+    const volgorde = viewsVan(edOnderdeel());
+    r.views.sort((a, b) => (volgorde.indexOf(a) + 1 || 1e9) - (volgorde.indexOf(b) + 1 || 1e9));
+  } else if (d.req !== undefined) {
+    r.requirements.ids = r.requirements.ids.filter(x => x !== d.req);
+    if (t.checked) r.requirements.ids.push(d.req);
+    r.requirements.ids.sort((a, b) => S.data.settings.requirements.indexOf(a) - S.data.settings.requirements.indexOf(b));
+  } else if (d.treq !== undefined) {
+    r.tobeRequirements = r.tobeRequirements.filter(x => x !== d.treq);
+    if (t.checked) r.tobeRequirements.push(d.treq);
+    const volgorde = S.data.settings.tobeRequirements;
+    r.tobeRequirements.sort((a, b) => (volgorde.indexOf(a) + 1 || 1e9) - (volgorde.indexOf(b) + 1 || 1e9));
+    renderWarn();
+  } else return;
+  bewaarWerkversie();
+}
+
+/* Aantal per actiecombinatie. COVO: het vinkje blijft leidend, het aantal is optioneel.
+   TO-BE: een actie bestaat zodra het aantal groter is dan 0. */
+function zetAantal(sleutelActie, waarde) {
+  const r = S.ed.rec, [object, soort] = sleutelActie.split('|');
+  const n = waarde === '' ? null : Math.max(0, parseInt(waarde, 10) || 0);
+  const i = r.acties.findIndex(a => a.object === object && a.soort === soort);
+  if (edType() === 'covo') {
+    if (n) {
+      if (i >= 0) r.acties[i].aantal = n; else r.acties.push({ object, soort, aantal: n });
+      const vink = $(`[data-actie="${sleutelActie}"]`); if (vink) vink.checked = true;
+    } else if (i >= 0) delete r.acties[i].aantal;
+  } else if (n) {
+    if (i >= 0) r.acties[i].aantal = n; else r.acties.push({ object, soort, aantal: n });
+  } else if (i >= 0) r.acties.splice(i, 1);
+  const tot = $('#acties-totaal'); if (tot) tot.textContent = actiesTotaal(r);
+}
+
+function zetPad(obj, pad, v) {
+  const delen = pad.split('.');
+  let o = obj;
+  for (let i = 0; i < delen.length - 1; i++) o = o[delen[i]];
+  o[delen[delen.length - 1]] = v;
+}
+
+function naBinding(pad) {
+  const r = S.ed.rec;
+  if (pad === 'pre.output') {
+    const p = parsedVoor('pre').p;
+    if (p.modus && p.modus !== r.modus) {
+      r.modus = p.modus;
+      $$('#ed-modus input').forEach(i => { i.checked = i.value === r.modus; });
+    }
+    renderParsed('pre'); renderConstraints(); renderMeldingen(); renderGevolg(); renderWarn();
+  } else if (pad === 'aft.output') {
+    if (r.aft.output.trim() && !r.aft.datum) {
+      r.aft.datum = vandaag(); r.aft.tijd = nuTijd();
+      $('[data-bind="aft.datum"]').value = r.aft.datum;
+      $('[data-bind="aft.tijd"]').value = r.aft.tijd;
+    }
+    renderParsed('aft'); renderGevolg(); renderDuur(); renderWarn();
+  } else if (pad === 'recordtype') {
+    renderEditor($('#main'));
+  } else if (/^(pre|aft)\.(datum|tijd)$/.test(pad)) {
+    renderDuur();
+  } else if (pad === 'modus' || pad === 'run') {
+    renderWarn();
+  } else if (pad === 'requirements.status') {
+    renderReq();
+  }
+}
+
+async function onEdClick(ev) {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  if (b.dataset.stap) { S.ed.stap = +b.dataset.stap; toonStap(); bewaarWerkversie(); return; }
+  const a = b.dataset.action, r = S.ed.rec;
+  if (a === 'vorige' || a === 'volgende') {
+    S.ed.stap = Math.min(3, Math.max(1, S.ed.stap + (a === 'vorige' ? -1 : 1)));
+    toonStap(); bewaarWerkversie(); window.scrollTo(0, 0);
+  } else if (a === 'annuleer') {
+    if (!(await bevestig('<p>Invoer annuleren? Niet-bewaarde wijzigingen gaan verloren.</p><p class="hint">Al geplakte screenshots blijven in de map screenshots/ staan.</p>', 'Annuleren', true))) return;
+    S.ed = null; S.data.werkversie = null; S.scherm = 'tijdlijn'; bewaarLog(true); render();
+  } else if (a === 'concept') bewaar(false);
+  else if (a === 'afronden') bewaar(true);
+  else if (a === 'aft-nu') {
+    r.aft.datum = vandaag(); r.aft.tijd = nuTijd();
+    $('[data-bind="aft.datum"]').value = r.aft.datum;
+    $('[data-bind="aft.tijd"]').value = r.aft.tijd;
+    renderDuur(); bewaarWerkversie();
+  } else if (a === 'c-add') voegConstraintToe();
+  else if (a === 'shot-weg' || a === 'shot-op' || a === 'shot-neer') {
+    const side = b.dataset.side, i = +b.dataset.i, lijst = r[side].screenshots;
+    if (a === 'shot-weg') lijst.splice(i, 1);
+    else {
+      const j = a === 'shot-op' ? i - 1 : i + 1;
+      if (j < 0 || j >= lijst.length) return;
+      [lijst[i], lijst[j]] = [lijst[j], lijst[i]];
+    }
+    renderShots('pre'); renderShots('aft'); bewaarWerkversie();
+  } else if (a === 'herz-add') {
+    const k = $('input[name="herz"]:checked');
+    if (!k) { toonMelding('Kies eerst een waarde voor de herziening.', 'waarsch'); return; }
+    r.behulpzaam.herzieningen.push({ waarde: k.value, datum: vandaag(), tijd: nuTijd(), opmerking: $('#herz-opm').value.trim() });
+    renderBehulpzaam(); bewaarWerkversie();
+  } else if (a === 'herz-del') {
+    if (!(await bevestig('<p>Deze herziening verwijderen?</p>', 'Verwijderen', true))) return;
+    r.behulpzaam.herzieningen.splice(+b.dataset.i, 1);
+    renderBehulpzaam(); bewaarWerkversie();
+  }
+}
+
+function voegConstraintToe() {
+  const inp = $('#ed-vrijc'), c = inp.value.trim().toUpperCase();
+  if (!c) return;
+  const r = S.ed.rec;
+  if (!r.constraints.includes(c)) r.constraints.push(c);
+  inp.value = '';
+  renderConstraints(); renderMeldingen(); bewaarWerkversie();
+}
+
+/* ---------- deelweergaven van de invoer ---------- */
+
+function parsedHtml(p, vast) {
+  const sel = p.selectie;
+  const codes = Object.keys(p.samenvatting);
+  const statusKlas = p.status === 'PASSED' ? 'ok' : p.status === 'FAILED' ? 'nok' : '';
+  return `
+    <div class="parsed-kop"><span class="badge ${vast ? 'vast' : 'live'}">${vast ? `vastgelegd · parser v${p.parserVersie}` : 'nog niet vastgelegd'}</span></div>
+    <table class="mini">
+      <tr><th>Status</th><td><span class="status ${statusKlas}">${esc(p.status || '?')}</span></td></tr>
+      <tr><th>Modus</th><td>${p.modus ? LABELS.modus[p.modus] : '?'}</td></tr>
+      <tr><th>Selectie</th><td>${sel.views ?? '?'} views · ${sel.elements ?? '?'} elements<br>${sel.horizontal ?? '?'} horizontal · ${sel.vertical ?? '?'} vertical rel.</td></tr>
+      <tr><th>Duur</th><td>${p.duurMs != null ? p.duurMs + ' ms' : '–'}</td></tr>
+    </table>
+    <h4>Meldingen per constraint${p.samenvattingAfgeleid ? ' <small>(afgeleid)</small>' : ''}</h4>
+    ${codes.length ? `<table class="mini">${codes.map(c => `<tr><th>${esc(c)}</th><td class="getal">${p.samenvatting[c]}</td><td>${esc(meldingenVoor(p, c).titel || '')}</td></tr>`).join('')}</table>` : '<p class="leeg">geen</p>'}
+    ${p.secties.length ? `<h4>Secties</h4><ul class="secties">${p.secties.map(s => `<li>${s.soort === 'view' ? `View: ${esc(s.view)}${s.aantal != null ? ` (${s.aantal})` : ''}` : esc(s.titel || s.soort)} — ${s.blokken.map(b => esc(b.code)).join(', ') || 'geen blokken'}</li>`).join('')}</ul>` : ''}
+    ${p.waarschuwingen.length ? `<div class="waarsch klein"><ul>${p.waarschuwingen.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}`;
+}
+function korteSamenvatting(p) {
+  if (!p.herkend) return '<span class="nok">niet herkend</span>';
+  const codes = Object.entries(p.samenvatting).map(([c, n]) => `${c} ${n}`).join(' · ');
+  return `${esc(p.status || '?')} · ${p.modus ? LABELS.modus[p.modus] : '?'}${codes ? ' · ' + esc(codes) : ''}`;
+}
+function renderParsed(side) {
+  const r = S.ed.rec, el = $(`#${side}-parsed`), sv = $(`#${side}-samenv`);
+  if (!el) return;
+  if (!r[side].output.trim()) { el.innerHTML = '<p class="leeg">Nog geen output geplakt.</p>'; sv.innerHTML = ''; return; }
+  const { p, vast } = parsedVoor(side);
+  el.innerHTML = parsedHtml(p, vast);
+  sv.innerHTML = '— ' + korteSamenvatting(p);
+}
+
+function renderConstraints() {
+  const el = $('#ed-constraints');
+  if (!el) return;
+  const r = S.ed.rec, p = parsedVoor('pre').p;
+  const inOutput = Object.keys(p.samenvatting);
+  const vast = S.data.settings.constraints.filter(c => !inOutput.includes(c));
+  const eigen = r.constraints.filter(c => !inOutput.includes(c) && !vast.includes(c));
+  const chip = (c, n) => {
+    const titel = n != null ? meldingenVoor(p, c).titel : '';
+    return `<label class="chip ${n != null ? 'in-output' : ''}" title="${esc(titel || '')}"><input type="checkbox" data-c="${esc(c)}" ${r.constraints.includes(c) ? 'checked' : ''}> ${esc(c)}${n != null ? ` <span class="tel">${n}</span>` : ''}</label>`;
+  };
+  el.innerHTML = `
+    <div class="chips"><span class="chips-label">In output vóór:</span>${inOutput.length ? inOutput.map(c => chip(c, p.samenvatting[c])).join('') : '<span class="leeg">geen</span>'}</div>
+    <div class="chips"><span class="chips-label">Overige:</span>${vast.map(c => chip(c, null)).join('')}${eigen.map(c => chip(c, null)).join('')}</div>`;
+}
+
+function renderMeldingen() {
+  const el = $('#ed-meldingen');
+  if (!el) return;
+  const r = S.ed.rec, p = parsedVoor('pre').p;
+  edItems = {};
+  if (!r.constraints.length) { el.innerHTML = '<p class="leeg">Vink eerst een of meer constraints aan.</p>'; return; }
+  el.innerHTML = r.constraints.map(c => {
+    const info = meldingenVoor(p, c);
+    edItems[c] = info.items;
+    const vrij = r.meldingen.find(x => x.constraint === c && x.bron === 'vrij');
+    const int = r.intuitief.perConstraint[c];
+    const nota = info.totaal != null && info.items.length < info.totaal
+      ? `<p class="hint">De output toont ${info.items.length} unieke melding(en); de samenvatting telt ${info.totaal}. De rest is afgekapt (“… and N more”).</p>` : '';
+    return `<div class="melding-blok">
+      <div class="melding-kop"><b>${esc(c)}</b> ${info.titel ? '— ' + esc(info.titel) : ''} ${info.totaal != null ? `<span class="tel">${info.totaal}</span>` : ''}
+        <span class="flex"></span>
+        <span class="keuzes">Intuïtief:
+          <label class="keuze"><input type="radio" name="int-${esc(c)}" data-int="${esc(c)}" value="ja" ${int === 'ja' ? 'checked' : ''}> Ja</label>
+          <label class="keuze"><input type="radio" name="int-${esc(c)}" data-int="${esc(c)}" value="nee" ${int === 'nee' ? 'checked' : ''}> Nee</label>
+        </span></div>
+      ${info.items.length ? `<div class="items">${info.items.map((it, i) => `<label class="item"><input type="checkbox" data-m="${esc(c)}" data-i="${i}" ${r.meldingen.some(x => x.constraint === c && x.bron === 'output' && x.tekst === it) ? 'checked' : ''}> <span>${esc(it)}</span></label>`).join('')}</div>` : '<p class="leeg">Geen meldingen voor deze constraint in de output vóór.</p>'}
+      ${nota}
+      <textarea data-vrij="${esc(c)}" rows="1" placeholder="Vrije tekst (optioneel)">${esc(vrij ? vrij.tekst : '')}</textarea>
+    </div>`;
+  }).join('');
+}
+
+function renderTobeReq() {
+  const el = $('#ed-tobereq');
+  if (!el) return;
+  const r = S.ed.rec, lijst = [...S.data.settings.tobeRequirements, ...r.tobeRequirements.filter(q => !S.data.settings.tobeRequirements.includes(q))];
+  el.innerHTML = lijst.length
+    ? `<div class="chips">${lijst.map(q => `<label class="chip"><input type="checkbox" data-treq="${esc(q)}" ${r.tobeRequirements.includes(q) ? 'checked' : ''}> ${esc(q)}</label>`).join('')}</div>`
+    : '<p class="leeg">Nog geen TO-BE-requirements. Voeg ze toe via Instellingen.</p>';
+}
+
+function renderActies() {
+  const el = $('#ed-acties');
+  if (!el) return;
+  const r = S.ed.rec, type = edType();
+  const actie = (o, s) => r.acties.find(a => a.object === o && (a.soort || null) === (s || null));
+  const cel = (o, s) => {
+    const a = actie(o, s), k = `${o}|${s}`, lbl = `${LABELS.object[o]} ${LABELS.soort[s]}`;
+    if (type === 'covo') {
+      return `<td><input type="checkbox" data-actie="${k}" ${a ? 'checked' : ''} aria-label="${lbl}">
+        <input type="number" min="0" class="aantal" data-aantal="${k}" value="${a && a.aantal != null ? a.aantal : ''}" placeholder="–" aria-label="Aantal ${lbl}"></td>`;
+    }
+    return `<td><input type="number" min="0" class="aantal" data-aantal="${k}" value="${a && a.aantal ? a.aantal : 0}" aria-label="Aantal ${lbl}"></td>`;
+  };
+  el.innerHTML = `
+    <table class="acties">
+      <tr><th></th>${SOORTEN.map(s => `<th>${LABELS.soort[s]}</th>`).join('')}</tr>
+      ${OBJECTEN.map(o => `<tr><th>${LABELS.object[o]}</th>${SOORTEN.map(s => cel(o, s)).join('')}</tr>`).join('')}
+    </table>
+    ${type !== 'covo' ? `<p class="hint">Totaal: <b id="acties-totaal">${actiesTotaal(r)}</b> actie(s).</p>` : ''}
+    ${type !== 'tobe-zonder' ? `<label class="keuze"><input type="checkbox" data-actie="niet_opgelost" ${actie('niet_opgelost') ? 'checked' : ''}> Bewust niet opgelost</label>` : ''}`;
+  zetBeschrijvingLabel();
+}
+function zetBeschrijvingLabel() {
+  const niet = S.ed.rec.acties.some(a => a.object === 'niet_opgelost');
+  $('#lbl-beschr').textContent = niet ? 'Beschrijving actie — motivering waarom bewust niet opgelost' : 'Beschrijving actie';
+}
+
+function renderBehulpzaam() {
+  const el = $('#ed-behulpzaam');
+  if (!el) return;
+  const r = S.ed.rec, o = origRec(), b = r.behulpzaam;
+  const vergrendeld = o && o.status === 'afgerond' && o.behulpzaam.moment;
+  const opties = Object.entries(LABELS.behulpzaam).filter(([k]) => k !== 'nvt' || edType() === 'tobe-met');
+  let html = vergrendeld
+    ? `<p>Oordeel op het moment zelf: <b>${LABELS.behulpzaam[b.moment]}</b> <small class="hint">(vastgelegd bij afronden)</small></p>`
+    : `<div class="keuzes">${opties.map(([k, l]) => radio('behulpzaam.moment', k, l, b.moment, 'beh-moment')).join('')}</div>`;
+  if (b.herzieningen.length) {
+    html += `<table class="mini herz"><tr><th>Herzien op</th><th>Oordeel</th><th>Opmerking</th><th></th></tr>${b.herzieningen.map((h, i) =>
+      `<tr><td>${toonDatum(h.datum)}</td><td>${LABELS.behulpzaam[h.waarde]}</td><td>${esc(h.opmerking)}</td><td><button type="button" class="klein" data-action="herz-del" data-i="${i}">×</button></td></tr>`).join('')}</table>`;
+  }
+  if (vergrendeld) {
+    html += `<div class="herz-nieuw"><span>Herziening toevoegen:</span>
+      ${opties.map(([k, l]) => `<label class="keuze"><input type="radio" name="herz" value="${k}"> ${l}</label>`).join('')}
+      <input type="text" id="herz-opm" placeholder="Opmerking (optioneel)">
+      <button type="button" data-action="herz-add">Toevoegen</button></div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderReq() {
+  const el = $('#ed-req');
+  if (!el) return;
+  const q = S.ed.rec.requirements;
+  let html = `<div class="keuzes">${Object.entries(LABELS.req).map(([k, l]) => radio('requirements.status', k, l, q.status, 'req-status')).join('')}</div>`;
+  if (q.status === 'geraakt' || q.status === 'verfijnd') {
+    html += `<div class="chips"><span class="chips-label">Welke:</span>${S.data.settings.requirements.map(id =>
+      `<label class="chip"><input type="checkbox" data-req="${esc(id)}" ${q.ids.includes(id) ? 'checked' : ''}> ${esc(id)}</label>`).join('')}</div>`;
+  }
+  if (q.status === 'verfijnd') {
+    html += `<label class="veld"><span class="label">Hoe werd het requirement verfijnd? <b class="verplicht">verplicht</b></span>
+      <textarea data-bind="requirements.verfijning" rows="3">${esc(q.verfijning)}</textarea></label>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderDuur() {
+  const el = $('#ed-duur');
+  if (!el) return;
+  const d = duurMinuten(S.ed.rec);
+  el.innerHTML = d === null ? '<span class="leeg">–</span>' : `<b>${d} min</b>`;
+  el.title = 'Berekend uit het tijdstip vóór en na.';
+}
+
+/* Bestandsnaam per positie: R1.01_pre.png, R1.01_pre-2.png, R1.01_pre-3.png … */
+const shotBasis = (run, side, i) => `${RUN_RE.test(run.trim()) ? run.trim() : 'zonder-run'}_${side}${i ? '-' + (i + 1) : ''}`;
+const naamPastBijBasis = (naam, basis) => new RegExp(`^${basis.replace(/[.]/g, '\\.')}(_\\d+)?\\.png$`).test(naam);
+
+async function renderShots(side) {
+  const r = S.ed.rec, el = $(`#${side}-shots`), lijst = r[side].screenshots;
+  const ander = r[side === 'pre' ? 'aft' : 'pre'].screenshots.length;
+  const verschil = lijst.length && ander && lijst.length !== ander
+    ? `<p class="hint nok">Vóór: ${r.pre.screenshots.length} screenshot(s), na: ${r.aft.screenshots.length}. De paren lopen niet gelijk.</p>` : '';
+  el.innerHTML = lijst.map((s, i) => `
+    <div class="plakvak gevuld" tabindex="0" data-shot="${side}" data-pos="${i}">
+      <div class="shot-kop"><span class="nr">${i + 1}</span> <code>${esc(s.naam)}</code>
+        ${s.eigen ? '' : '<small class="hint">overgenomen van het vorige record</small>'}<span class="flex"></span>
+        <button type="button" class="klein" data-action="shot-op" data-side="${side}" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="Naar voor">↑</button>
+        <button type="button" class="klein" data-action="shot-neer" data-side="${side}" data-i="${i}" ${i === lijst.length - 1 ? 'disabled' : ''} title="Naar achter">↓</button>
+        <button type="button" class="klein" data-action="shot-weg" data-side="${side}" data-i="${i}">Verwijderen</button></div>
+      <img data-naam="${esc(s.naam)}" alt="${esc(s.naam)}">
+      <p class="hint">Plak (<kbd>Ctrl</kbd>+<kbd>V</kbd>) of sleep in dit vak om deze screenshot te vervangen.</p>
+    </div>`).join('') + `
+    <div class="plakvak nieuw" tabindex="0" data-shot="${side}" data-pos="nieuw">
+      <span class="nr">${lijst.length + 1}</span> ${lijst.length ? 'Extra screenshot' : 'Screenshot'}: klik hier en druk <kbd>Ctrl</kbd>+<kbd>V</kbd>, of sleep een of meer afbeeldingen hierheen.
+    </div>${verschil}`;
+  for (const img of $$('img[data-naam]', el)) {
+    const url = await Opslag.screenshotUrl(S.map, img.dataset.naam);
+    if (!img.isConnected) return;
+    if (url) {
+      img.src = url;
+      // lightbox over de screenshots van dit record
+      const i = +img.closest('.plakvak').dataset.pos;
+      img.onclick = () => {
+        const items = lbItems([S.ed.rec]);
+        openLightbox(items, items.findIndex(x => x.side === side && x.nr === i + 1));
+      };
+    }
+    else img.replaceWith(Object.assign(document.createElement('p'), { className: 'nok', textContent: 'Bestand niet gevonden in screenshots/.' }));
+  }
+}
+
+function onEdPaste(ev) {
+  const vak = ev.target.closest('.plakvak');
+  if (!vak) return;
+  const items = [...(ev.clipboardData ? ev.clipboardData.items : [])];
+  const it = items.find(i => i.kind === 'file' && i.type.startsWith('image/'));
+  ev.preventDefault();
+  if (!it) { toonMelding('Geen afbeelding op het klembord.', 'waarsch'); return; }
+  plakAfbeeldingen(vak.dataset.shot, vak.dataset.pos, [it.getAsFile()]);
+}
+function onEdDrop(ev) {
+  const vak = ev.target.closest('.plakvak');
+  if (!vak) return;
+  ev.preventDefault();
+  vak.classList.remove('sleep');
+  const fs = [...ev.dataTransfer.files].filter(x => x.type.startsWith('image/'));
+  if (!fs.length) { toonMelding('Dat is geen afbeelding.', 'waarsch'); return; }
+  // op een bestaand vak: alleen de eerste vervangt; op het nieuwe vak: allemaal toevoegen
+  plakAfbeeldingen(vak.dataset.shot, vak.dataset.pos, vak.dataset.pos === 'nieuw' ? fs : fs.slice(0, 1));
+}
+async function plakAfbeeldingen(side, pos, blobs) {
+  const r = S.ed.rec, lijst = r[side].screenshots;
+  const namen = [];
+  try {
+    for (const blob of blobs) {
+      const i = pos === 'nieuw' ? lijst.length : +pos;
+      const naam = await Opslag.bewaarScreenshot(S.map, blob, shotBasis(r.run, side, i));
+      if (pos === 'nieuw') lijst.push({ naam, eigen: true }); else lijst[i] = { naam, eigen: true };
+      namen.push(naam);
+    }
+  } catch (e) { toonMelding('Screenshot opslaan mislukt: ' + e.message, 'fout'); }
+  renderShots('pre'); renderShots('aft'); bewaarWerkversie();
+  if (namen.length) toonMelding(`Opgeslagen in screenshots/: ${namen.join(', ')}.`);
+}
+
+function renderGevolg() {
+  const el = $('#ed-gevolg'), r = S.ed.rec;
+  if (!el) return;
+  if (!r.aft.output.trim() || !r.pre.output.trim()) {
+    el.innerHTML = '<p class="leeg">Wordt berekend zodra zowel de Pre- als de Aft_Validatoroutput ingevuld zijn.</p>';
+    return;
+  }
+  el.innerHTML = gevolgHtml(berekenGevolg(parsedVoor('pre').p, parsedVoor('aft').p));
+}
+function gevolgHtml(g) {
+  if (!g) return '<span class="leeg">–</span>';
+  const rij = x => {
+    const kl = x.na > x.voor ? 'nok' : x.na < x.voor ? 'ok' : '';
+    return `<tr class="${kl}"><th>${esc(x.code)}</th><td class="getal">${x.voor}</td><td>→</td><td class="getal">${x.na}</td><td>${g.nieuw.includes(x.code) ? 'nieuw' : g.verdwenen.includes(x.code) ? 'verdwenen' : ''}</td></tr>`;
+  };
+  const nm = (g.meldingenNieuw || []).filter(x => x.zeker.length || x.mogelijk.length || x.naAfgekapt);
+  return `<p class="gevolg-tekst">${esc(g.tekst)}</p>
+    <table class="mini">${g.perConstraint.map(rij).join('')}
+    <tr class="totaal"><th>Totaal</th><td class="getal">${g.totaalVoor}</td><td>→</td><td class="getal">${g.totaalNa}</td><td>${esc(g.statusVoor || '?')} → ${esc(g.statusNa || '?')}</td></tr></table>
+    ${g.nieuw.length ? `<p class="nok">Nieuw verschenen: ${g.nieuw.map(esc).join(', ')}</p>` : ''}
+    ${g.verdwenen.length ? `<p class="ok">Verdwenen: ${g.verdwenen.map(esc).join(', ')}</p>` : ''}
+    ${nm.length ? `<div class="nieuwe-meldingen"><b class="nok">Nieuwe meldingen</b><ul>${nm.map(x => `<li><b>${esc(x.code)}</b>
+      ${x.zeker.length ? `<div>zeker nieuw: ${x.zeker.map(esc).join('; ')}</div>` : ''}
+      ${x.mogelijk.length ? `<div>mogelijk nieuw (lijst vóór afgekapt): ${x.mogelijk.map(esc).join('; ')}</div>` : ''}
+      ${x.naAfgekapt ? '<div class="hint">lijst na is afgekapt: mogelijk nog meer nieuwe meldingen</div>' : ''}</li>`).join('')}</ul></div>` : ''}`;
+}
+
+function renderWarn() {
+  const r = S.ed.rec, o = edOnderdeel();
+  const pre = r.pre.output.trim() ? parsedVoor('pre').p : null;
+  const aft = r.aft.output.trim() ? parsedVoor('aft').p : null;
+  const w = berekenWaarschuwingen(r, vorigVoor(r, S.ed.origId), pre, aft);
+  if (r.run && !runPatroon(o).test(r.run.trim())) w.unshift(`Run moet de vorm ${eersteRun(o)} hebben (onderdeel “${o.naam}”).`);
+  if (o.type !== 'covo' && !r.tobeRequirements.length) w.push('Nog geen TO-BE-requirement gekozen.');
+  $('#ed-warn').innerHTML = w.length ? `<div class="waarsch"><b>Controleer:</b><ul>${w.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+}
+
+/* ---------- bewaren ---------- */
+
+async function bewaar(afronden) {
+  const e = S.ed, r = e.rec, o = origRec(), ond = edOnderdeel(), type = ond.type;
+  r.run = r.run.trim();
+  const fouten = [];
+  if (!runPatroon(ond).test(r.run)) fouten.push(`Run moet de vorm ${eersteRun(ond)} hebben (onderdeel “${ond.naam}”).`);
+  else if (S.data.records.some(x => x.id !== e.origId && x.run === r.run)) fouten.push(`Run ${r.run} bestaat al.`);
+  const q = r.requirements;
+  if (type === 'covo') {
+    if ((q.status === 'geraakt' || q.status === 'verfijnd') && !q.ids.length) fouten.push('Kies bij Requirements welke requirement(s) geraakt of verfijnd zijn.');
+    if (q.status === 'verfijnd' && !q.verfijning.trim()) fouten.push('Bij “Verfijnd” is “hoe werd het requirement verfijnd?” verplicht.');
+  }
+  if (afronden && type !== 'tobe-zonder') {
+    if (!r.pre.output.trim()) fouten.push('Vul de Pre_Validatoroutput in om af te ronden.');
+    if (!r.aft.output.trim()) fouten.push('Vul de Aft_Validatoroutput in om af te ronden (of bewaar als concept).');
+  }
+  if (fouten.length) {
+    await bevestig(`<h3>Nog niet bewaard</h3><ul>${fouten.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`, 'OK');
+    return;
+  }
+
+  // opschonen: velden die in dit onderdeel (of recordtype) niet getoond worden, leegmaken
+  if (!toontConstraints()) { r.constraints = []; r.meldingen = []; r.intuitief = { perConstraint: {}, opmerking: '' }; }
+  r.meldingen = r.meldingen.filter(m => r.constraints.includes(m.constraint) && m.tekst.trim());
+  const pc = {};
+  for (const c of r.constraints) if (r.intuitief.perConstraint[c]) pc[c] = r.intuitief.perConstraint[c];
+  r.intuitief.perConstraint = pc;
+  if (type === 'covo') {
+    r.tobeRequirements = [];
+    if (q.status !== 'geraakt' && q.status !== 'verfijnd') q.ids = [];
+    if (q.status !== 'verfijnd') q.verfijning = '';
+  } else {
+    r.requirements = { status: null, ids: [], verfijning: '' };
+    r.acties = r.acties.filter(a => a.object === 'niet_opgelost' || a.aantal > 0);
+  }
+  if (type === 'tobe-zonder') {
+    r.pre.output = ''; r.modus = null; r.build = '';
+    r.behulpzaam = { moment: null, herzieningen: [] };
+    r.acties = r.acties.filter(a => a.object !== 'niet_opgelost');
+  }
+
+  // parsing vastleggen: alleen opnieuw parsen als de tekst gewijzigd is
+  for (const side of ['pre', 'aft']) {
+    if (!r[side].output.trim()) r[side].parsed = null;
+    else if (o && o[side].parsed && o[side].output === r[side].output) r[side].parsed = o[side].parsed;
+    else r[side].parsed = parseValidatorOutput(r[side].output);
+  }
+  const ongewijzigd = o && o.gevolg && o.pre.output === r.pre.output && o.aft.output === r.aft.output;
+  r.gevolg = type !== 'tobe-zonder' && r.pre.parsed && r.aft.parsed
+    ? (ongewijzigd ? o.gevolg : berekenGevolg(r.pre.parsed, r.aft.parsed)) : null;
+  r.waarschuwingen = berekenWaarschuwingen(r, vorigVoor(r, e.origId), r.pre.parsed, r.aft.parsed);
+  if (type !== 'covo' && !r.tobeRequirements.length) r.waarschuwingen.push('Geen TO-BE-requirement gekozen.');
+
+  // eigen screenshots hernoemen naar runnummer + positie (na gewijzigde run of volgorde).
+  // Twee fasen (eerst tijdelijke naam), zodat omgewisselde bestanden niet botsen.
+  for (const side of ['pre', 'aft']) {
+    const lijst = r[side].screenshots;
+    const teHernoemen = lijst.filter((s, i) => s.eigen && !naamPastBijBasis(s.naam, shotBasis(r.run, side, i)));
+    try {
+      for (const s of teHernoemen) s.naam = await Opslag.hernoemScreenshot(S.map, s.naam, `tmp-${uid()}`);
+      for (const s of teHernoemen) s.naam = await Opslag.hernoemScreenshot(S.map, s.naam, shotBasis(r.run, side, lijst.indexOf(s)));
+    } catch (err) { toonMelding(`Screenshots hernoemen mislukt: ${err.message}`, 'fout'); }
+  }
+
+  r.status = afronden ? 'afgerond' : 'concept';
+  r.gewijzigd = isoNu();
+  if (!r.aangemaakt) r.aangemaakt = r.gewijzigd;
+  const i = S.data.records.findIndex(x => x.id === r.id);
+  if (i >= 0) S.data.records[i] = r; else S.data.records.push(r);
+  S.data.werkversie = null;
+  S.ed = null;
+  bewaarLog(true);
+  S.open.add(r.id);
+  S.scherm = 'tijdlijn';
+  render();
+  toonMelding(`${r.run} bewaard als ${r.status}.`);
+  const rij = $(`tr[data-id="${r.id}"]`);
+  if (rij) rij.scrollIntoView({ block: 'center' });
+}
+
+</script>
+  <script>/* js/weergaven.js */
+'use strict';
+/* Weergaven: tijdlijn, tabel met detail (vorige/volgende), overzichten, vergelijking TO-BE, instellingen.
+   Alle weergaven tonen alleen de records van het actieve onderdeel (behalve de vergelijking). */
+
+/* ================= kolommen per onderdeeltype ================= */
+
+function kolommen(type) {
+  const nieuwm = r => r.gevolg && (r.gevolg.nieuw.length || r.gevolg.toegenomen.length);
+  const K = {
+    run: { kop: 'Run', cel: r => `<b>${esc(r.run)}</b>`, sort: r => runSorteersleutel(r.run) },
+    datum: { kop: 'Datum', cel: r => `${toonDatum(r.pre.datum)} <small>${esc((r.pre.tijd || '').slice(0, 5))}</small>`, sort: r => sleutel(r) },
+    duur: { kop: 'Duur', cel: r => { const d = duurMinuten(r); return d === null ? '<span class="leeg">–</span>' : `${d} min`; }, sort: r => duurMinuten(r) ?? -1, klas: 'getal' },
+    recordtype: { kop: 'Soort', cel: r => (r.recordtype ? `<span class="badge rt-${r.recordtype}">${r.recordtype === 'correctie' ? 'correctie' : 'wijziging'}</span>` : ''), sort: r => r.recordtype || '' },
+    tobereq: { kop: 'Requirement(s)', cel: r => esc(r.tobeRequirements.join(', ')), sort: r => r.tobeRequirements.join(',') },
+    views: { kop: 'View', cel: r => r.views.map(esc).join('<br>'), sort: r => r.views.join(','), klas: 'view-kol' },
+    modus: { kop: 'Modus', cel: r => (r.modus ? LABELS.modus[r.modus] : ''), sort: r => r.modus || '' },
+    constraints: { kop: 'Constraints', cel: r => esc(r.constraints.join(', ')), sort: r => r.constraints.join(',') },
+    acties: { kop: 'Actie', cel: r => esc(r.acties.map(actieTekst).join(', ')), sort: r => (type === 'covo' ? r.acties.length : actiesTotaal(r)) },
+    gevolg: {
+      kop: 'Gevolg',
+      cel: r => (r.gevolg ? `<span class="${nieuwm(r) ? 'nok' : ''}">${esc(r.gevolg.tekst)}</span>` : '<span class="leeg">–</span>'),
+      sort: r => (r.gevolg ? toenameVan(r.gevolg) : -1)
+    },
+    badges: {
+      kop: '', klas: 'badges', sort: null,
+      cel: r => `${r.status === 'concept' ? '<span class="badge concept">concept</span>' : ''}${r.waarschuwingen.length ? `<span class="badge waarsch" title="${esc(r.waarschuwingen.join('\n'))}">⚠ ${r.waarschuwingen.length}</span>` : ''}`
+    }
+  };
+  const volgorde = {
+    covo: ['run', 'datum', 'views', 'modus', 'constraints', 'acties', 'gevolg', 'badges'],
+    'tobe-zonder': ['run', 'datum', 'duur', 'tobereq', 'views', 'acties', 'badges'],
+    'tobe-met': ['run', 'datum', 'duur', 'recordtype', 'tobereq', 'constraints', 'views', 'acties', 'gevolg', 'badges']
+  }[type] || [];
+  return volgorde.map(k => ({ key: k, ...K[k] }));
+}
+const celHtml = (c, r) => `<td class="${c.klas || ''}">${c.cel(r)}</td>`;
+
+/* Records van het actieve onderdeel, gefilterd; in de tabel ook gesorteerd. */
+function zichtbareRecords() {
+  const lijst = pasFilterToe(chrono(recsActief()));
+  if (S.scherm !== 'tabel') return lijst;
+  const k = kolommen(actief().type).find(c => c.key === S.sort.kol && c.sort);
+  if (!k) return lijst;
+  return lijst.map((r, i) => ({ r, i, v: k.sort(r) }))
+    .sort((a, b) => { const c = a.v < b.v ? -1 : a.v > b.v ? 1 : 0; return c ? c * S.sort.richting : a.i - b.i; })
+    .map(x => x.r);
+}
+const kopOnderdeel = (titel, aantal, totaal) =>
+  `<div class="kop-rij"><h2>${titel}</h2><span class="badge onderdeel">${esc(actief().naam)}</span><span class="hint">${aantal} van ${totaal} records</span></div>`;
+const geenRecords = alle => `<p class="leeg">${alle.length ? 'Geen records voor deze filters.' : 'Nog geen records in dit onderdeel. Klik op “+ Nieuw record” om te beginnen.'}</p>`;
+
+/* ================= tijdlijn ================= */
+
+function renderTijdlijn(m) {
+  const type = actief().type, alle = chrono(recsActief()), recs = zichtbareRecords(), cols = kolommen(type);
+  m.innerHTML = `<section class="kaart">
+    ${kopOnderdeel('Tijdlijn', recs.length, alle.length)}
+    ${filterBalk(alle, type)}
+    ${recs.length ? `<table class="tijdlijn">
+      <thead><tr>${cols.map(c => `<th>${c.kop}</th>`).join('')}</tr></thead>
+      <tbody>${recs.map(r => `
+        <tr class="rec ${S.open.has(r.id) ? 'open' : ''}" data-id="${r.id}">${cols.map(c => celHtml(c, r)).join('')}</tr>
+        ${S.open.has(r.id) ? `<tr class="detail"><td colspan="${cols.length}">${detailHtml(r)}</td></tr>` : ''}`).join('')}
+      </tbody></table>` : geenRecords(alle)}
+  </section>`;
+  bindFilters(m.firstElementChild);
+  m.firstElementChild.addEventListener('click', onTijdlijnClick);
+  laadShots(m);
+}
+
+/* ================= tabel + detail ================= */
+
+function renderTabel(m) {
+  const type = actief().type, alle = chrono(recsActief()), recs = zichtbareRecords();
+  if (S.detailId && recs.some(r => r.id === S.detailId)) { renderDetailNav(m, recs); return; }
+  S.detailId = null;
+  const cols = kolommen(type);
+  m.innerHTML = `<section class="kaart">
+    ${kopOnderdeel('Tabel', recs.length, alle.length)}
+    ${filterBalk(alle, type)}
+    ${recs.length ? `<table class="tijdlijn tabel">
+      <thead><tr>${cols.map(c => `<th ${c.sort ? `data-sort="${c.key}" class="sorteerbaar ${S.sort.kol === c.key ? (S.sort.richting > 0 ? 'op' : 'af') : ''}"` : ''}>${c.kop}</th>`).join('')}</tr></thead>
+      <tbody>${recs.map(r => `<tr class="rec" data-id="${r.id}">${cols.map(c => celHtml(c, r)).join('')}</tr>`).join('')}</tbody>
+    </table><p class="hint">Klik op een kolomkop om te sorteren, op een rij voor de details.</p>` : geenRecords(alle)}
+  </section>`;
+  const sec = m.firstElementChild;
+  bindFilters(sec);
+  sec.addEventListener('click', ev => {
+    const th = ev.target.closest('th[data-sort]');
+    if (th) {
+      S.sort = S.sort.kol === th.dataset.sort ? { kol: th.dataset.sort, richting: -S.sort.richting } : { kol: th.dataset.sort, richting: 1 };
+      render();
+      return;
+    }
+    const tr = ev.target.closest('tr.rec');
+    if (tr) { S.detailId = tr.dataset.id; render(); window.scrollTo(0, 0); }
+  });
+}
+
+function renderDetailNav(m, recs) {
+  const i = recs.findIndex(r => r.id === S.detailId), r = recs[i];
+  m.innerHTML = `<section class="kaart">
+    <div class="detail-nav">
+      <button type="button" data-nav="terug">← Terug naar de tabel</button>
+      <span class="flex"></span>
+      <button type="button" data-nav="-1" ${i === 0 ? 'disabled' : ''}>‹ Vorige</button>
+      <span class="positie"><b>${esc(r.run)}</b> · ${i + 1} / ${recs.length}</span>
+      <button type="button" data-nav="1" ${i === recs.length - 1 ? 'disabled' : ''}>Volgende ›</button>
+    </div>
+    <p class="hint">Pijltjestoetsen: vorige / volgende record (in de volgorde en met de filters van de tabel) · Esc: terug naar de tabel.</p>
+    ${detailHtml(r)}
+  </section>`;
+  const sec = m.firstElementChild;
+  sec.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-nav]');
+    if (!b) return;
+    if (b.dataset.nav === 'terug') { S.detailId = null; render(); } else bladerDetail(+b.dataset.nav);
+  });
+  sec.addEventListener('click', onTijdlijnClick);
+  laadShots(m);
+}
+function bladerDetail(stap) {
+  const recs = zichtbareRecords(), i = recs.findIndex(r => r.id === S.detailId);
+  const j = Math.max(0, Math.min(recs.length - 1, i + stap));
+  if (i < 0 || j === i) return;
+  S.detailId = recs[j].id;
+  render();
+}
+
+/* ================= detail van één record ================= */
+
+function detailHtml(r) {
+  const type = typeVan(r), metValidator = type !== 'tobe-zonder';
+  const h = behulpzaamHerzien(r), q = r.requirements, d = duurMinuten(r);
+  const meld = r.constraints.map(c => {
+    const ms = r.meldingen.filter(x => x.constraint === c);
+    const int = r.intuitief.perConstraint[c];
+    return `<li><b>${esc(c)}</b> <small>intuïtief: ${int ? LABELS.behulpzaam[int] : '–'}</small>${ms.length ? `<ul>${ms.map(x => `<li>${esc(x.tekst)}${x.bron === 'vrij' ? ' <small>(vrij)</small>' : ''}</li>`).join('')}</ul>` : ''}</li>`;
+  }).join('');
+  // screenshots per paar: vóór n naast na n
+  const shot = (side, label, i) => {
+    const s = r[side].screenshots[i];
+    return `<figure><figcaption>${label} ${i + 1}${s ? ` — <code>${esc(s.naam)}</code>` : ''}</figcaption>
+      ${s ? `<img data-shot-naam="${esc(s.naam)}" data-rec="${r.id}" data-side="${side}" data-i="${i}" alt="${label} ${i + 1}" title="Klik om groot te openen">` : '<div class="leeg-shot">geen screenshot</div>'}</figure>`;
+  };
+  const paren = Math.max(1, r.pre.screenshots.length, r.aft.screenshots.length);
+  const shotsHtml = Array.from({ length: paren }, (_, i) => shot('pre', 'Vóór', i) + shot('aft', 'Na', i)).join('');
+  const rij = (dt, dd) => `<dt>${dt}</dt><dd>${dd}</dd>`;
+  const tijd = side => (r[side].datum ? `${toonDatum(r[side].datum)} ${esc(r[side].tijd)}` : '–');
+  const rijen = [];
+  if (r.recordtype) rijen.push(rij('Soort record', LABELS.recordtype[r.recordtype]));
+  if (metValidator) {
+    rijen.push(rij('Run vóór', `${tijd('pre')} — ${r.pre.parsed ? korteSamenvatting(r.pre.parsed) : '–'}`));
+    rijen.push(rij('Run na', `${tijd('aft')} — ${r.aft.parsed ? korteSamenvatting(r.aft.parsed) : '–'}`));
+  } else {
+    rijen.push(rij('Start', tijd('pre')), rij('Einde', tijd('aft')));
+    if (r.aft.parsed) rijen.push(rij('Validatoroutput (ter info)', korteSamenvatting(r.aft.parsed)));
+  }
+  if (type !== 'covo') rijen.push(rij('Duur', d === null ? '–' : `${d} min`));
+  if (metValidator) rijen.push(rij('Modus', r.modus ? LABELS.modus[r.modus] : '–'), rij('Validator build', esc(r.build) || '–'));
+  if (type !== 'covo') rijen.push(rij(r.recordtype === 'correctie' ? 'Hoort bij TO-BE-requirement(s)' : 'TO-BE-requirement(s)', esc(r.tobeRequirements.join(', ')) || '–'));
+  rijen.push(rij('View(s)', r.views.map(esc).join('<br>') || '–'));
+  if (type === 'covo' || r.constraints.length) {
+    rijen.push(rij('Constraints &amp; meldingen', meld ? `<ul class="meld">${meld}</ul>` : '–'));
+    rijen.push(rij('Opmerking intuïtief', esc(r.intuitief.opmerking) || '–'));
+  }
+  rijen.push(rij('Uitgevoerde actie', esc(r.acties.map(actieTekst).join(', ')) || '–'));
+  if (type !== 'covo') rijen.push(rij('Acties totaal', String(actiesTotaal(r))));
+  rijen.push(rij('Beschrijving', `<div class="pre-wrap">${esc(r.beschrijving) || '–'}</div>`));
+  if (type !== 'tobe-zonder') {
+    rijen.push(rij('Behulpzaam', `moment zelf: <b>${r.behulpzaam.moment ? LABELS.behulpzaam[r.behulpzaam.moment] : '–'}</b>${h ? ` · herzien op ${toonDatum(h.datum)}: <b>${LABELS.behulpzaam[h.waarde]}</b>${h.opmerking ? ` (${esc(h.opmerking)})` : ''}` : ''}${r.behulpzaam.herzieningen.length > 1 ? ` <small>(${r.behulpzaam.herzieningen.length} herzieningen)</small>` : ''}`));
+  }
+  if (type === 'covo') rijen.push(rij('Requirements', `${q.status ? LABELS.req[q.status] : '–'}${q.ids.length ? ': ' + esc(q.ids.join(', ')) : ''}${q.verfijning ? `<div class="pre-wrap">${esc(q.verfijning)}</div>` : ''}`));
+  if (metValidator) rijen.push(rij('Gevolg', gevolgHtml(r.gevolg)));
+  rijen.push(rij('Parser', `${(r.pre.parsed || r.aft.parsed) ? 'v' + (r.pre.parsed || r.aft.parsed).parserVersie : '–'}${r.parseHistoriek.length ? ` · ${r.parseHistoriek.length}× opnieuw geparst` : ''}`));
+  return `<div class="detail-inhoud">
+    <div class="detail-knoppen">
+      <button type="button" data-action="bewerk" data-id="${r.id}">${r.status === 'concept' ? 'Verder invullen' : 'Bewerken'}</button>
+      ${r.pre.output || r.aft.output ? `<button type="button" data-action="herparse" data-id="${r.id}">Opnieuw parsen…</button>` : ''}
+      <button type="button" data-action="verwijder" data-id="${r.id}" class="gevaar">Verwijderen</button>
+    </div>
+    ${r.waarschuwingen.length ? `<div class="waarsch"><b>Waarschuwingen bij bewaren:</b><ul>${r.waarschuwingen.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
+    <div class="detail-grid">
+      <dl>${rijen.join('')}</dl>
+      <div class="shots">${shotsHtml}</div>
+    </div>
+    ${r.pre.output ? `<details><summary>Pre_Validatoroutput (ruw)</summary><pre class="ruw">${esc(r.pre.output)}</pre></details>` : ''}
+    ${r.aft.output ? `<details><summary>${metValidator ? 'Aft_Validatoroutput' : 'Validatoroutput ter info'} (ruw)</summary><pre class="ruw">${esc(r.aft.output)}</pre></details>` : ''}
+  </div>`;
+}
+
+async function laadShots(root) {
+  for (const img of $$('img[data-shot-naam]', root)) {
+    const url = await Opslag.screenshotUrl(S.map, img.dataset.shotNaam);
+    if (!img.isConnected) return;
+    if (url) {
+      img.src = url;
+      // lightbox over alle screenshots van de zichtbare records (zelfde volgorde en filters)
+      img.onclick = () => {
+        const items = lbItems(zichtbareRecords());
+        const d = img.dataset;
+        openLightbox(items, items.findIndex(x => x.recId === d.rec && x.side === d.side && x.nr === +d.i + 1));
+      };
+    }
+    else img.replaceWith(Object.assign(document.createElement('p'), { className: 'nok', textContent: 'Bestand niet gevonden.' }));
+  }
+}
+
+async function onTijdlijnClick(ev) {
+  const b = ev.target.closest('button[data-action]');
+  if (b) {
+    if (window.COVO_VIEWER) return; // viewer: alleen-lezen
+    const id = b.dataset.id;
+    if (b.dataset.action === 'bewerk') startBewerken(id);
+    else if (b.dataset.action === 'verwijder') verwijder(id);
+    else if (b.dataset.action === 'herparse') herparse(id);
+    return;
+  }
+  if (S.scherm !== 'tijdlijn') return;
+  const tr = ev.target.closest('tr.rec');
+  if (tr) {
+    const id = tr.dataset.id;
+    if (S.open.has(id)) S.open.delete(id); else S.open.add(id);
+    render();
+  }
+}
+
+async function verwijder(id) {
+  const r = zoek(id);
+  if (!(await bevestig(`<p>Record <b>${esc(r.run)}</b> definitief verwijderen uit de log?</p><p class="hint">Screenshots blijven in de map screenshots/ staan. De dagelijkse back-up bevat de toestand van vóór de eerste wijziging van vandaag.</p>`, 'Verwijderen', true))) return;
+  S.data.records = S.data.records.filter(x => x.id !== id);
+  S.open.delete(id);
+  if (S.detailId === id) S.detailId = null;
+  bewaarLog(true);
+  render();
+  toonMelding(`${r.run} verwijderd.`);
+}
+
+async function herparse(id) {
+  const r = zoek(id);
+  const nieuw = {}, lijsten = [];
+  for (const side of ['pre', 'aft']) {
+    if (!r[side].output.trim()) continue;
+    nieuw[side] = parseValidatorOutput(r[side].output);
+    const v = vergelijkParsed(r[side].parsed, nieuw[side]);
+    if (v.length) lijsten.push(`<h4>Output ${side === 'pre' ? 'vóór' : 'na'}</h4><ul>${v.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
+  }
+  if (!lijsten.length) { toonMelding('Opnieuw parsen geeft hetzelfde resultaat. Er verandert niets.'); return; }
+  const pre = nieuw.pre || r.pre.parsed, aft = nieuw.aft || r.aft.parsed;
+  const g = typeVan(r) !== 'tobe-zonder' && pre && aft ? berekenGevolg(pre, aft) : null;
+  const gTekst = g && (!r.gevolg || r.gevolg.tekst !== g.tekst) ? `<h4>Gevolg</h4><p>${esc(r.gevolg ? r.gevolg.tekst : '–')}<br>→ ${esc(g.tekst)}</p>` : '';
+  const ok = await bevestig(`<h3>Opnieuw parsen: ${esc(r.run)}</h3><p>De huidige parser (v${PARSER_VERSIE}) leest de ruwe tekst anders dan wat vastgelegd is:</p>${lijsten.join('')}${gTekst}
+    <p class="hint">Bij vervangen blijft de oude parsing bewaard in de historiek van dit record.</p>`, 'Vervangen');
+  if (!ok) return;
+  r.parseHistoriek.push({ datum: isoNu(), pre: r.pre.parsed, aft: r.aft.parsed, gevolg: r.gevolg });
+  if (nieuw.pre) r.pre.parsed = nieuw.pre;
+  if (nieuw.aft) r.aft.parsed = nieuw.aft;
+  r.gevolg = g;
+  r.gewijzigd = isoNu();
+  bewaarLog(true);
+  render();
+  toonMelding(`Parsing van ${r.run} vervangen.`);
+}
+
+/* ================= overzicht ================= */
+
+function renderOverzicht(m) {
+  const type = actief().type, alle = chrono(recsActief()), recs = pasFilterToe(alle);
+  let inhoud;
+  if (!recs.length) inhoud = geenRecords(alle);
+  else if (type === 'covo') {
+    const groepen = new Map();
+    for (const r of recs) {
+      const g = groepVan(r.run);
+      if (!groepen.has(g)) groepen.set(g, []);
+      groepen.get(g).push(r);
+    }
+    const keys = [...groepen.keys()].sort((a, b) => (a ?? 1e9) - (b ?? 1e9));
+    inhoud = keys.map(g => groepHtml(g, groepen.get(g))).join('');
+  } else inhoud = tobeOverzichtHtml(recs, type);
+  m.innerHTML = `<section class="kaart">
+    ${kopOnderdeel(type === 'covo' ? 'Overzicht per groep' : 'Overzicht per TO-BE-requirement', recs.length, alle.length)}
+    ${filterBalk(alle, type)}
+    ${inhoud}
+  </section>`;
+  bindFilters(m.firstElementChild);
+}
+
+function groepHtml(g, recs) {
+  const o = overzichtGroep(recs);
+  const codes = [...new Set([...Object.keys(o.eerste ? o.eerste.samenvatting : {}), ...Object.keys(o.laatste ? o.laatste.samenvatting : {})])].sort();
+  const pct = (a, n) => (n ? Math.round((100 * a) / n) + '%' : '–');
+  const bTabel = ['moment', 'herzien'].map(k => {
+    const d = o.behulpzaam[k];
+    return `<tr><th>${k === 'moment' ? 'Moment zelf' : 'Na herziening'}</th><td class="getal">${d.ja}</td><td class="getal">${d.nee}</td><td class="getal">${d.twijfel}</td><td class="getal">${d.leeg}</td></tr>`;
+  }).join('');
+  const intCodes = Object.keys(o.intuitief).sort();
+  return `<div class="groep">
+    <h3>${g === null ? 'Zonder geldig runnummer' : 'Groep ' + g} <small>${o.aantal} records, ${o.afgerond} afgerond</small></h3>
+    <div class="groep-grid">
+      <div><h4>Meldingen per constraint</h4>
+        ${codes.length ? `<table class="mini"><tr><th></th><th>Eerste<br><small>${esc(o.eerste ? o.eerste.run + ' vóór' : '–')}</small></th><th>Laatste<br><small>${esc(o.laatste ? o.laatste.run + ' ' + o.laatste.moment : '–')}</small></th></tr>
+          ${codes.map(c => `<tr><th>${esc(c)}</th><td class="getal">${o.eerste ? o.eerste.samenvatting[c] || 0 : '–'}</td><td class="getal">${o.laatste ? o.laatste.samenvatting[c] || 0 : '–'}</td></tr>`).join('')}</table>` : '<p class="leeg">geen meldingen</p>'}
+      </div>
+      <div><h4>Acties <small>(aantal records)</small></h4>
+        <table class="mini"><tr><th></th>${SOORTEN.map(s => `<th>${LABELS.soort[s]}</th>`).join('')}</tr>
+          ${OBJECTEN.map(ob => `<tr><th>${LABELS.object[ob]}</th>${SOORTEN.map(s => `<td class="getal">${o.acties[ob][s]}</td>`).join('')}</tr>`).join('')}
+        </table><p>Bewust niet opgelost: <b>${o.nietOpgelost}</b></p>
+      </div>
+      <div><h4>Intuïtief per constraint</h4>
+        ${intCodes.length ? `<table class="mini"><tr><th></th><th>Ja</th><th>Nee</th><th>leeg</th><th>aandeel ja</th></tr>
+          ${intCodes.map(c => { const d = o.intuitief[c]; return `<tr><th>${esc(c)}</th><td class="getal">${d.ja}</td><td class="getal">${d.nee}</td><td class="getal">${d.leeg}</td><td class="getal">${pct(d.ja, d.ja + d.nee)}</td></tr>`; }).join('')}</table>` : '<p class="leeg">–</p>'}
+      </div>
+      <div><h4>Behulpzaam</h4>
+        <table class="mini"><tr><th></th><th>Ja</th><th>Nee</th><th>Twijfel</th><th>leeg</th></tr>${bTabel}</table>
+        <p class="hint">${o.behulpzaam.aantalHerzien} record(s) herzien. “Na herziening” = laatste herziening, anders het oordeel van het moment zelf.</p>
+      </div>
+      <div><h4>Requirements</h4>
+        <p>Geraakt: <b>${o.req.geraakt}</b> · Verfijnd: <b>${o.req.verfijnd}</b></p>
+        ${o.req.lijst.length ? `<ul class="lijst">${o.req.lijst.map(x => `<li><b>${esc(x.run)}</b> ${LABELS.req[x.status].toLowerCase()}: ${esc(x.ids.join(', '))}${x.verfijning ? `<div class="pre-wrap hint">${esc(x.verfijning)}</div>` : ''}</li>`).join('')}</ul>` : ''}
+      </div>
+      <div><h4>Records met nieuwe meldingen</h4>${nieuweMeldingenLijst(o.nieuweMeldingen)}</div>
+    </div>
+  </div>`;
+}
+const nieuweMeldingenLijst = lijst => (lijst.length
+  ? `<ul class="lijst">${lijst.map(x => `<li><b>${esc(x.run)}</b>: ${x.nieuw.length ? 'nieuw ' + esc(x.nieuw.join(', ')) : ''}${x.nieuw.length && x.toegenomen.length ? '; ' : ''}${x.toegenomen.length ? 'toegenomen ' + esc(x.toegenomen.join(', ')) : ''}<div class="hint">${esc(x.tekst)}</div></li>`).join('')}</ul>`
+  : '<p class="leeg">geen</p>');
+
+const duurCel = x => `${x.duur} min${x.duurOnbekend ? ` <small class="hint">(${x.duurOnbekend} zonder tijd)</small>` : ''}`;
+function tobeOverzichtHtml(recs, type) {
+  const met = type === 'tobe-met';
+  const ov = overzichtTobe(recs, S.data.settings.tobeRequirements);
+  const rijen = [...ov.per.entries()];
+  if (ov.zonder.records) rijen.push(['(geen requirement)', ov.zonder]);
+  const hoofd = (q, x, th = 'th') => `<tr><${th}>${esc(q)}</${th}><td class="getal">${x.records}</td>
+    ${met ? `<td class="getal">${x.wijzigingen}</td><td class="getal">${x.correcties}</td>` : ''}
+    <td class="getal">${x.actiesTotaal}</td><td class="getal">${duurCel(x)}</td>
+    ${met ? `<td class="getal">${x.toename}</td><td class="getal">${x.nieuweConstraints}</td>` : ''}</tr>`;
+  const perSoort = (q, x) => `<tr><th>${esc(q)}</th>${OBJECTEN.flatMap(o => SOORTEN.map(s => `<td class="getal">${x.acties[o][s] || ''}</td>`)).join('')}</tr>`;
+  return `<div class="groep">
+    <h4>Per requirement</h4>
+    <table class="mini breed">
+      <tr><th>Requirement</th><th>Records</th>${met ? '<th>Wijzigingen</th><th>Correcties</th>' : ''}<th>Acties</th><th>Duur</th>${met ? '<th>Toename meldingen</th><th>Nieuwe constraints</th>' : ''}</tr>
+      ${rijen.map(([q, x]) => hoofd(q, x)).join('')}
+      <tfoot>${hoofd('Totaal', ov.totaal)}</tfoot>
+    </table>
+    <p class="hint">Een record met meerdere requirements telt bij elk van die requirements mee; de totaalrij telt elk record één keer. Duur = tijdstip na − tijdstip vóór.</p>
+    <h4>Acties per soort <small>(som van de aantallen)</small></h4>
+    <table class="mini breed acties-soort">
+      <tr><th rowspan="2">Requirement</th>${OBJECTEN.map(o => `<th colspan="${SOORTEN.length}">${LABELS.object[o]}</th>`).join('')}</tr>
+      <tr>${OBJECTEN.map(() => SOORTEN.map(s => `<th>${LABELS.soort[s]}</th>`).join('')).join('')}</tr>
+      ${rijen.map(([q, x]) => perSoort(q, x)).join('')}
+      <tfoot>${perSoort('Totaal', ov.totaal)}</tfoot>
+    </table>
+    ${met ? `<h4>Records met nieuwe meldingen</h4>${nieuweMeldingenLijst(overzichtGroep(recs).nieuweMeldingen)}` : ''}
+  </div>`;
+}
+
+/* ================= vergelijking TO-BE ================= */
+
+/* Per requirement: model zonder COVO tegenover model met COVO. */
+function vergelijkingData() {
+  const oz = onderdelen().find(x => x.type === 'tobe-zonder'), om = onderdelen().find(x => x.type === 'tobe-met');
+  const reqs = S.data.settings.tobeRequirements;
+  const vz = overzichtTobe(chrono(recsVan(oz.id)), reqs), vm = overzichtTobe(chrono(recsVan(om.id)), reqs);
+  const keys = [...new Set([...vz.per.keys(), ...vm.per.keys()])];
+  const rijen = keys.map(q => ({ requirement: q, z: vz.per.get(q) || tobeRij(), m: vm.per.get(q) || tobeRij() }));
+  if (vz.zonder.records || vm.zonder.records) rijen.push({ requirement: '(geen requirement)', z: vz.zonder, m: vm.zonder });
+  return { oz, om, rijen, totaal: { requirement: 'Totaal', z: vz.totaal, m: vm.totaal } };
+}
+function renderVergelijking(m) {
+  const v = vergelijkingData();
+  const rij = (x, th = 'th') => `<tr><${th}>${esc(x.requirement)}</${th}>
+    <td class="getal z">${x.z.records}</td><td class="getal m">${x.m.records} <small class="hint">(${x.m.wijzigingen} w · ${x.m.correcties} c)</small></td>
+    <td class="getal z">${x.z.actiesTotaal}</td><td class="getal m">${x.m.actiesTotaal}</td>
+    <td class="getal z">${duurCel(x.z)}</td><td class="getal m">${duurCel(x.m)}</td>
+    <td class="getal m">${x.m.toename}</td><td class="getal m">${x.m.correcties}</td></tr>`;
+  m.innerHTML = `<section class="kaart">
+    <div class="kop-rij"><h2>Vergelijking TO-BE</h2><span class="hint">combineert bewust beide TO-BE-onderdelen</span>
+      <span class="flex"></span><button type="button" id="btn-csv-vgl">CSV vergelijking</button></div>
+    <table class="mini breed vergelijking">
+      <tr><th rowspan="2">Requirement</th><th colspan="2">Records</th><th colspan="2">Acties</th><th colspan="2">Duur</th><th colspan="2">Alleen met COVO</th></tr>
+      <tr><th class="z">${esc(v.oz.naam)}</th><th class="m">${esc(v.om.naam)}</th><th class="z">zonder</th><th class="m">met</th><th class="z">zonder</th><th class="m">met</th><th class="m">Toename meldingen</th><th class="m">Correcties</th></tr>
+      ${v.rijen.map(x => rij(x)).join('')}
+      <tfoot>${rij(v.totaal)}</tfoot>
+    </table>
+    <p class="hint">w = TO-BE-wijzigingen, c = COVO-correcties. Correcties tellen mee bij het requirement waar ze bij horen. Een record met meerdere requirements telt bij elk ervan; de totaalrij telt elk record één keer. Per actiesoort: zie de CSV.</p>
+  </section>`;
+  $('#btn-csv-vgl').addEventListener('click', () => exporteerVergelijkingCsv(vergelijkingData()));
+}
+
+/* ================= instellingen ================= */
+
+function renderInstellingen(m) {
+  const inst = S.data.settings;
+  const lijst = (id, label, waarden, hint) => `<label class="veld"><span class="label">${label}</span>
+    <textarea id="${id}" rows="${Math.min(14, waarden.length + 2)}">${esc(waarden.join('\n'))}</textarea><small class="hint">${hint}</small></label>`;
+  m.innerHTML = `<section class="kaart instellingen">
+    <h2>Instellingen</h2>
+    <div class="veld"><span class="label">Gegevensmap</span>
+      <p>📁 <b>${esc(S.map.name)}</b> — ${S.data.records.length} records. <button type="button" id="in-map">Andere map kiezen…</button></p>
+      <small class="hint">Bij een andere map laadt de tool de log.json uit die map (of start een nieuwe).</small></div>
+
+    <div class="veld"><span class="label">Onderdelen</span>
+      <table class="mini breed onderdelen">
+        <tr><th>Naam</th><th>Type (formulier)</th><th>Run-prefix</th><th>Records</th><th></th></tr>
+        ${inst.onderdelen.map(o => { const n = recsVan(o.id).length; return `<tr>
+          <td><input type="text" data-o-naam="${esc(o.id)}" value="${esc(o.naam)}"></td>
+          <td>${esc(LABELS.type[o.type])}</td>
+          <td><input type="text" class="kort" data-o-prefix="${esc(o.id)}" value="${esc(o.runPrefix)}" ${n ? 'disabled title="Niet aanpasbaar zolang er records zijn."' : ''}></td>
+          <td class="getal">${n}</td>
+          <td>${n || inst.onderdelen.length === 1 ? '' : `<button type="button" class="klein gevaar" data-o-del="${esc(o.id)}">Verwijderen</button>`}</td></tr>`; }).join('')}
+        <tr class="nieuw-onderdeel">
+          <td><input type="text" id="no-naam" placeholder="Naam nieuw onderdeel"></td>
+          <td><select id="no-type">${Object.entries(LABELS.type).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></td>
+          <td><input type="text" class="kort" id="no-prefix" placeholder="bv. T3"></td>
+          <td></td><td><button type="button" id="no-add">Toevoegen</button></td></tr>
+      </table>
+      <small class="hint">Het type bepaalt het invoerformulier. Runnummers: COVO-type = prefix + groep (R1.01), TO-BE-types = vaste prefix (T1.01).</small>
+    </div>
+
+    <div class="veld"><span class="label">Views per onderdeel <small class="hint">keuzelijst bij veld View(s)</small></span>
+      <div class="views-per-onderdeel">${inst.onderdelen.map(o => { const v = viewsVan(o); return `
+        <label class="veld"><span class="label"><span class="badge onderdeel o-${esc(o.type)}">${esc(o.naam)}</span>${Array.isArray(o.views) ? '' : ' <small class="hint">nog de gemeenschappelijke lijst: schrap wat niet bij dit onderdeel hoort</small>'}</span>
+          <textarea data-o-views="${esc(o.id)}" rows="${Math.min(14, v.length + 2)}">${esc(v.join('\n'))}</textarea></label>`; }).join('')}
+      </div>
+      <small class="hint">Eén view per regel. In de invoer, de filters en de tabel zie je alleen de views van het actieve onderdeel. Records met een verwijderde view behouden hun waarde.</small>
+    </div>
+    ${lijst('in-cons', 'Vaste lijst constraints', inst.constraints, 'Eén code per regel.')}
+    ${lijst('in-req', 'Requirements (COVO-iteratie: geraakt / verfijnd)', inst.requirements, 'Eén requirement per regel.')}
+    ${lijst('in-treq', 'TO-BE-requirements', inst.tobeRequirements, 'Eén requirement per regel.')}
+    <p><button type="button" class="primair" id="in-bewaar">Instellingen bewaren</button></p>
+    <p class="hint">Parser versie ${PARSER_VERSIE} · schemaversie log ${S.data.schemaVersion}${S.data.migraties.length ? ` · omgezet op ${S.data.migraties.map(x => `${toonDatum(x.datum)} (back-up ${esc(x.backup)})`).join(', ')}` : ''}.</p>
+  </section>`;
+  const regels = id => [...new Set($('#' + id).value.split('\n').map(x => x.trim()).filter(Boolean))];
+  const prefixGeldig = (p, type) => (type === 'covo' ? /^[A-Z]+$/ : /^[A-Z]+\d*$/).test(p);
+  $('#in-bewaar').addEventListener('click', () => {
+    const fouten = [];
+    const nieuw = inst.onderdelen.map(o => ({
+      ...o,
+      naam: $(`[data-o-naam="${o.id}"]`).value.trim() || o.naam,
+      runPrefix: $(`[data-o-prefix="${o.id}"]`).value.trim().toUpperCase(),
+      views: [...new Set($(`[data-o-views="${o.id}"]`).value.split('\n').map(x => x.trim()).filter(Boolean))]
+    }));
+    for (const o of nieuw) if (!prefixGeldig(o.runPrefix, o.type)) fouten.push(`Ongeldige run-prefix “${o.runPrefix}” voor ${o.naam}.`);
+    if (new Set(nieuw.map(o => o.runPrefix)).size !== nieuw.length) fouten.push('Elke run-prefix moet uniek zijn.');
+    if (fouten.length) { bevestig(`<h3>Niet bewaard</h3><ul>${fouten.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`, 'OK'); return; }
+    inst.onderdelen = nieuw;
+    inst.constraints = regels('in-cons').map(x => x.toUpperCase());
+    inst.requirements = regels('in-req');
+    inst.tobeRequirements = regels('in-treq');
+    bewaarLog(true);
+    toonMelding('Instellingen bewaard.');
+    render();
+  });
+  $('#no-add').addEventListener('click', () => {
+    const naam = $('#no-naam').value.trim(), type = $('#no-type').value, prefix = $('#no-prefix').value.trim().toUpperCase();
+    if (!naam || !prefixGeldig(prefix, type) || inst.onderdelen.some(o => o.runPrefix === prefix)) {
+      toonMelding('Geef een naam en een unieke, geldige run-prefix (COVO-type: letters, bv. Q; TO-BE-type: bv. T3).', 'waarsch');
+      return;
+    }
+    const id = naam.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) + '-' + uid().slice(0, 4);
+    inst.onderdelen.push({ id, naam, type, runPrefix: prefix, views: [] });
+    bewaarLog(true);
+    render();
+  });
+  m.querySelector('.onderdelen').addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-o-del]');
+    if (!b) return;
+    const o = onderdeelVan(b.dataset.oDel);
+    if (recsVan(o.id).length || !(await bevestig(`<p>Onderdeel <b>${esc(o.naam)}</b> verwijderen? Het heeft geen records.</p>`, 'Verwijderen', true))) return;
+    inst.onderdelen = inst.onderdelen.filter(x => x.id !== o.id);
+    if (S.data.actiefOnderdeel === o.id) S.data.actiefOnderdeel = inst.onderdelen[0].id;
+    bewaarLog(true);
+    render();
+  });
+  $('#in-map').addEventListener('click', async () => {
+    if (S.ed && !(await bevestig('<p>Er is een invoer bezig. Die blijft bewaard in de log.json van de huidige map. Doorgaan?</p>', 'Doorgaan'))) return;
+    kiesAndereMap();
+  });
+}
+
+</script>
+</body>
+</html>

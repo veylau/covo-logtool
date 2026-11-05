@@ -186,6 +186,7 @@ async function start() {
   $('#nav').addEventListener('click', e => {
     const b = e.target.closest('[data-scherm]');
     if (!b || !S.data) return;
+    if (window.COVO_VIEWER && ['invoer', 'instellingen'].includes(b.dataset.scherm)) return;
     if (b.dataset.scherm === 'invoer' && !S.ed) { startNieuw(); return; }
     S.scherm = b.dataset.scherm;
     if (S.scherm !== 'tabel') S.detailId = null;
@@ -197,6 +198,7 @@ async function start() {
   bindLightbox();
   bindToetsen();
 
+  if (window.COVO_VIEWER) { startViewer(); return; }
   if (!('showDirectoryPicker' in window)) { toonStart('geenapi'); return; }
   let h = null;
   try { h = await Opslag.haalBewaardeMap(); } catch (e) { /* geen bewaarde map */ }
@@ -227,6 +229,32 @@ function toonStart(soort, h) {
 async function kiesAndereMap() {
   try { await openMap(await Opslag.kiesMap()); }
   catch (e) { if (e.name !== 'AbortError') toonMelding(e.message, 'fout'); }
+}
+/* Viewer (covo-viewer.html op een webserver): leest log.json naast de pagina, alleen-lezen, schrijft nooit. */
+async function startViewer() {
+  document.body.classList.add('viewer');
+  S.alleenLezen = true;
+  const fout = (titel, html) => { $('#main').innerHTML = `<section class="kaart start"><h2>${titel}</h2>${html}</section>`; };
+  let tekst;
+  try {
+    const r = await fetch('log.json', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    tekst = await r.text();
+  } catch (e) {
+    fout('Log niet gevonden', `<p>Zet <code>log.json</code> en de map <code>screenshots/</code> in dezelfde map als deze pagina, op een webserver (${esc(e.message)}).</p>`);
+    return;
+  }
+  let d;
+  try { d = JSON.parse(tekst); }
+  catch (e) { fout('log.json is beschadigd', `<p>${esc(e.message)}</p>`); return; }
+  if ((d.schemaVersion || 1) > SCHEMA_VERSIE) { fout('Log is nieuwer dan deze viewer', '<p>Gebruik een recentere versie van de viewer.</p>'); return; }
+  S.data = migreer(d); // alleen in het geheugen
+  S.data.werkversie = null;
+  const laatst = S.data.records.map(r => r.gewijzigd || '').sort().pop();
+  $('#mapnaam').textContent = `Alleen-lezen${laatst ? ` · stand van ${toonDatum(laatst)}` : ''}`;
+  document.body.classList.add('geladen');
+  S.scherm = 'tabel';
+  render();
 }
 function toonBlokkade(titel, html) {
   S.alleenLezen = true;
